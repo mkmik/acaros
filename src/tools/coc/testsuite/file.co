@@ -1,0 +1,69 @@
+/* -*- mode: c -*- */
+
+#include <stdio.h>
+#include <stdlib.h>
+void* mm_malloc(int size) { return malloc(size); }
+
+@+class Base {
+  int base;
+};
+
+@+class Child : Base {
+  int a;
+};
+
+@-Base@init() {
+  @base = 1;
+  @return self;
+}
+
+@-Base@test(int arg) {
+  printf("Base %d\n", arg);
+  
+  @return self;
+}
+
+@-Child@init() {
+  super@init();
+  @base += 4;
+  @a = 6;
+  @return self;
+}
+
+@-Child@test(int arg) {
+  printf("Child %d\n", arg);
+  super@test(arg);
+
+  @return self;
+}
+
+int main() {
+  Class_t* Base_class;
+  Class_t* Child_class;
+  Child_t* my_object;
+
+  // C Objects e' un ambiente dinamico
+  // e l'inizializzazione avviene a run time
+  // qundi bisogna in qualche modo riempire le 
+  // tabelle e creare le classi.
+  // in futuro verra' gestito semi automaticamente
+  Base_class = createClass("Base", 0, sizeof(Base_t));
+  addMethod(Base_class, "test", (method_t) Base_test);
+  addMethod(Base_class, "init", (method_t) Base_init);
+
+  Child_class = createClass("Child", Base_class, sizeof(Child_t));
+  addMethod(Child_class, "test", (method_t) Child_test);
+  addMethod(Child_class, "init", (method_t) Child_init);
+
+  // ora possiamo istanziare un vero oggetto
+  // in futuro forse le classi saranno oggetti e 
+  // potremo usare la sintassi Child@new()
+
+  my_object = newObject("Child");
+
+  my_object@init();
+  int val = my_object@a;
+  my_object@test(val);
+
+  return 0;
+}

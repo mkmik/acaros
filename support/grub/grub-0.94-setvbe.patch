@@ -1,0 +1,206 @@
+Index: ChangeLog
+===================================================================
+RCS file: /cvsroot/grub/grub/ChangeLog,v
+retrieving revision 1.573
+diff -u -p -r1.573 ChangeLog
+--- ChangeLog	30 Dec 2003 12:36:13 -0000	1.573
++++ ChangeLog	2 Jan 2004 21:52:46 -0000
+@@ -1,3 +1,17 @@
++2004-01-02  Durand J. Miller  <clutter@djm.co.za>
++
++	* stage2/builtins.c (setvbe_func): New function to set the VBE
++	mode and mbi information during the booting sequence.
++	* stage2/builtins.c (builtin_table): Added a pointer to the
++	BUILTIN_SETVBE function.
++	* stage2/common.c (mbi_vbe_controller): New variable and in ...
++	* stage2/shared.h (mbi_vbe_controller): ... this.
++	* stage2/common.c (mbi_vbe_mode_info): New variable and in ...
++	* stage2/shared.h (mbi_vbe_mode_info): ... this.
++	* docs/grub.texi (setvbe): Added some documentation for the 
++	setvbe command.
++
++
+ 2003-12-30  Yoshinori K. Okuji  <okuji@enbug.org>
+ 
+ 	* stage2/fsys_ext2fs.c (ext2_is_fast_symlink): New function.
+Index: docs/grub.texi
+===================================================================
+RCS file: /cvsroot/grub/grub/docs/grub.texi,v
+retrieving revision 1.70
+diff -u -p -r1.70 grub.texi
+--- docs/grub.texi	9 Jun 2003 22:22:36 -0000	1.70
++++ docs/grub.texi	2 Jan 2004 21:53:03 -0000
+@@ -2404,6 +2404,7 @@ you forget a command, you can run the co
+ * rootnoverify::                Set GRUB's root device without mounting
+ * savedefault::                 Save current entry as the default entry
+ * setup::                       Set up GRUB's installation automatically
++* setvbe::                      Set VESA BIOS EXTENSION
+ * testload::                    Load a file for testing a filesystem
+ * testvbe::                     Test VESA BIOS EXTENSION
+ * uppermem::                    Set the upper memory size
+@@ -2909,6 +2910,19 @@ in @file{/boot/grub} and @file{/grub}.
+ The options @option{--force-lba} and @option{--stage2} are just passed
+ to @command{install} if specified. @xref{install}, for more
+ information.
++@end deffn
++
++
++@node setvbe
++@subsection setvbe
++
++@deffn Command setvbe mode
++Set the VESA BIOS EXTENSION mode @var{mode}. This command will switch
++your video card to the graphics mode requested. Use vbeprobe to
++determine the mode number for the desired screen dimensions and depth. If 
++this command is called from within a menu option during boot of a multiboot 
++compliant kernel, the VBE information will be passed to the kernel for use 
++by the OS. See also @xref{vbeprobe}, and @xref{testvbe}.
+ @end deffn
+ 
+ 
+Index: stage2/builtins.c
+===================================================================
+RCS file: /cvsroot/grub/grub/stage2/builtins.c,v
+retrieving revision 1.143
+diff -u -p -r1.143 builtins.c
+--- stage2/builtins.c	10 Mar 2003 01:12:26 -0000	1.143
++++ stage2/builtins.c	2 Jan 2004 21:53:19 -0000
+@@ -3955,6 +3955,98 @@ static struct builtin builtin_setup =
+   " to tell GRUB the file name under your OS."
+ };
+ 
++
++
++/* setvbe MODE */
++static int
++setvbe_func (char *arg, int flags)
++{
++  int mode_number;
++  
++  if (! *arg)
++    {
++      errnum = ERR_BAD_ARGUMENT;
++      return 1;
++    }
++
++  if (! safe_parse_maxint (&arg, &mode_number))
++    {
++      errnum = ERR_BAD_ARGUMENT;
++      return 1;
++    }
++
++  /* Preset `VBE2'.  */
++  grub_memmove (mbi_vbe_controller.signature, "VBE2", 4);
++
++  /* Detect VBE BIOS.  */
++  if (get_vbe_controller_info (&mbi_vbe_controller) != 0x004F)
++    {
++      grub_printf (" VBE BIOS is not present.\n");
++      return 1;
++    }
++  
++  if (mbi_vbe_controller.version < 0x0200)
++    {
++      grub_printf (" VBE version %d.%d is not supported.\n",
++		   (int) (mbi_vbe_controller.version >> 8),
++		   (int) (mbi_vbe_controller.version & 0xFF));
++      return 1;
++    }
++
++  if (get_vbe_mode_info (mode_number, &mbi_vbe_mode_info) != 0x004F
++      || (mbi_vbe_mode_info.mode_attributes & 0x0091) != 0x0091)
++    {
++      grub_printf (" Mode 0x%x is not supported.\n", mode_number);
++      return 1;
++    }
++
++  /* Now trip to the graphics mode.  */
++  if (set_vbe_mode (mode_number | (1 << 14)) != 0x004F)
++    {
++      grub_printf (" Switching to Mode 0x%x failed.\n", mode_number);
++      return 1;
++    }
++
++  /* Back to the default text mode if not in a script.  */
++  if (! (flags & BUILTIN_SCRIPT))
++    {
++      getkey ();
++      if (set_vbe_mode (0x03) != 0x004F)
++      {
++        /* Why?!  */
++         grub_reboot ();
++      }
++    }
++   else
++     {
++     	if ( kernel_type == KERNEL_TYPE_MULTIBOOT )
++	  {
++ 	    /* set the multiboot information */
++            mbi.flags |= MB_INFO_VIDEO_INFO;
++	    mbi.vbe_control_info = (unsigned long) &mbi_vbe_controller;
++	    mbi.vbe_mode_info = (unsigned long) &mbi_vbe_mode_info;
++	    mbi.vbe_mode = mode_number;
++	    mbi.vbe_interface_seg = 0;
++	    mbi.vbe_interface_off = 0;
++	    mbi.vbe_interface_len = 0;
++	  }
++     }
++
++  return 0;
++}
++
++static struct builtin builtin_setvbe =
++{
++  "setvbe",
++  setvbe_func,
++  BUILTIN_CMDLINE | BUILTIN_SCRIPT | BUILTIN_HELP_LIST,
++  "setvbe MODE",
++  "Set the VBE mode. In command-line mode, press any key to return to "
++  "text mode.  During booting of a menu option, the vbe mode is allowed "
++  "to remain and the vbe info is passed to multiboot kernels for use by the OS."
++};
++
++
+ 
+ #if defined(SUPPORT_SERIAL) || defined(SUPPORT_HERCULES)
+ /* terminal */
+@@ -4735,6 +4827,7 @@ struct builtin *builtin_table[] =
+ #endif /* SUPPORT_SERIAL */
+   &builtin_setkey,
+   &builtin_setup,
++  &builtin_setvbe,
+ #if defined(SUPPORT_SERIAL) || defined(SUPPORT_HERCULES)
+   &builtin_terminal,
+ #endif /* SUPPORT_SERIAL || SUPPORT_HERCULES */
+Index: stage2/common.c
+===================================================================
+RCS file: /cvsroot/grub/grub/stage2/common.c,v
+retrieving revision 1.24
+diff -u -p -r1.24 common.c
+--- stage2/common.c	11 Jun 2002 16:36:54 -0000	1.24
++++ stage2/common.c	2 Jan 2004 21:53:21 -0000
+@@ -32,6 +32,8 @@
+ struct multiboot_info mbi;
+ unsigned long saved_drive;
+ unsigned long saved_partition;
++struct vbe_controller mbi_vbe_controller;
++struct vbe_mode mbi_vbe_mode_info;
+ #ifndef STAGE1_5
+ unsigned long saved_mem_upper;
+ 
+Index: stage2/shared.h
+===================================================================
+RCS file: /cvsroot/grub/grub/stage2/shared.h,v
+retrieving revision 1.93
+diff -u -p -r1.93 shared.h
+--- stage2/shared.h	18 Mar 2003 23:51:59 -0000	1.93
++++ stage2/shared.h	2 Jan 2004 21:53:25 -0000
+@@ -657,6 +657,8 @@ extern int filemax;
+ extern struct multiboot_info mbi;
+ extern unsigned long saved_drive;
+ extern unsigned long saved_partition;
++extern struct vbe_controller mbi_vbe_controller;
++extern struct vbe_mode mbi_vbe_mode_info;
+ #ifndef STAGE1_5
+ extern unsigned long saved_mem_upper;
+ extern unsigned long extended_memory;

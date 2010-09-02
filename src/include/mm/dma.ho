@@ -1,0 +1,21 @@
+/* -*- mode: c -*- */
+
+#ifndef _MM_DMA_HO_
+#define _MM_DMA_HO_
+
+#include <mm/dma.h>
+#include <mm/addressspace.ho>
+#include <mm/pool.ho>
+
+/** a dma region directly mappes zones of low
+ * physical memory which devices are able to 
+ * access directly
+ */
+@+class DmaPool: Pool {
+  pointer_t physical_start;
+};
+
+/** gloabl dma pool */
+extern DmaPool_t *dmaPool;
+
+#endif

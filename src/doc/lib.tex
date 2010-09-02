@@ -1,0 +1,121 @@
+\chapter{Library helpers}
+
+Acaros supplies a set of useful library functions and data
+structures.
+
+\section{libstand}
+\section{libalgo}
+
+\subsection{Linked lists}
+The doubly linked list implementation used in acaros
+is derived from the linux kernel sources. It is designed
+for high performance and low overhead. Instead of
+manage separate \emph{nodes}, linking information is embedded
+in the manged objects.
+
+Example \ref{fig:link1} shows how to create a structure that
+can be a node of two separate lists (\texttt{free\_list} and \texttt{busy\_list}).
+ All list handling functions operate on \texttt{list\_head\_t} structures;
+you should pass always the pointer to your \texttt{list\_head\_t} member.
+ Once you have a pointer to a \texttt{list\_head\_t} you can get back 
+the pointer to the original object using the \texttt{list\_entry} macro.
+ See figures \ref{fig:listexample1} and \ref{fig:listexample2} for an example.
+
+\begin{figure}[h!]
+  \begin{verbatim}
+    struct data {
+      int a;
+      int b;
+      list_head_t free_list;
+      int c;
+      list_head_t busy_list;
+      int d;
+    };
+  \end{verbatim}
+  \caption{Linked list example.}
+  \label{fig:link1}
+\end{figure}
+
+\begin{figure}[h!]
+  \begin{verbatim}
+    list_head_t free_list_head = INIT_LIST_HEAD(free_list_head);
+    
+    struct data d1,d2,d3;
+    
+    list_add(&d1.free_list, &free_list_head);
+    list_add(&d2.free_list, &free_list_head);
+    list_add(&d3.free_list, &d2.free_list);
+
+    // gives: d2->d3->d1
+
+    list_add(&d1.busy_list, &busy_list_head);
+    list_add_tail(&d2.busy_list, &busy_list_head);
+    list_add_tail(&d3.busy_list, &busy_list_head);
+
+    // gives: d1->d2->d3
+  \end{verbatim}
+  \caption{Linked list ordering.}
+  \label{fig:listexample1}
+\end{figure}
+
+\begin{figure}[h!]
+  \begin{verbatim}
+    list_head_t *pos;
+    struct data *current;
+    int sum=0;
+
+    list_for_each(pos, &free_list_head) {
+      current = list_entry(pos, struct data, free_list);
+      sum += current->a;
+    }
+
+    list_for_each(pos, &busy_list_head) {
+      current = list_entry(pos, struct data, busy_list);
+      sum += current->b;
+    }
+  \end{verbatim}
+  \caption{List traversal.}
+  \label{fig:listexample2}
+\end{figure}
+
+Figure \ref{fig:listexample1} demonstrates how a specific ordering 
+can be obtained using \texttt{list\_add} and \texttt{list\_add\_tail}.
+ Figure \ref{fig:listexample2} demonstrates list traversal helper macros
+\texttt{list\_for\_each} and \texttt{list\_entry}.
+In order to obtain the original structure from a \texttt{list\_head\_t}
+you can use \texttt{list\_entry} macro, passing the node pointer, the
+type of the structure and the name of the \texttt{list\_head\_t} member.
+
+\subsection{AVL tree}
+
+AVL trees are balanced binary search trees which have $O(\log_{2} n)$ complexity.
+The AVL tree concepts in \acaros\ is somewhat similar to those of linked lists:
+ the node structure (containing left, right, and skew) is embedded inside the 
+custom data structure. This way a structure can be maintained in multiple trees 
+at the same moment and can put in the tree without allocating node structures 
+(useful when the memory manager is not yet functional).
+
+However, the AVL tree must maintan order and compare elements in order to achieve that.
+The user must provide a \texttt{compare} function and a \texttt{match} function.
+
+\begin{description}
+\item[compare]
+  The \texttt{compare} function accepts two nodes and returns a value lesser than, equal or greater
+  than zero if the first argument is respectively lesser than, equal or greater than the second
+  argument.
+  
+  This function is called when a new node is inserted in the tree.
+  
+\item[match]
+  The \texttt{compare} function could be used also for finding an element but
+  the user should create a dummy object with the specified key. However tha main
+  reason to implement a separate \texttt{match} function is to implement \emph{range searching}
+  \footnote{Used expecially in memory management.}.
+\end{description}
+
+In order to simplify the syntax of the \texttt{avl\_add} and \texttt{avl\_find}
+macros the \texttt{compare} and \texttt{match} functions must be named \texttt{typename\_avlcompare}
+and \texttt{typename\_avlmatch} respectively. This naming implies that the type name 
+should not contain spaces\footnote{\textsf{struct}s must be typedefed.\acaros\ coding conventions
+already guarantee this.}.
+

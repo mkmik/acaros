@@ -1,0 +1,8 @@
+checklist.o: checklist.c dialog.h
+inputbox.o: inputbox.c dialog.h
+lxdialog.o: lxdialog.c dialog.h
+menubox.o: menubox.c dialog.h
+msgbox.o: msgbox.c dialog.h
+textbox.o: textbox.c dialog.h
+util.o: util.c dialog.h colors.h
+yesno.o: yesno.c dialog.h

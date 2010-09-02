@@ -1,0 +1,35 @@
+gdt.o: gdt.c ../../../../arch/i386/include/platform/mal/gdt.h \
+  ../../../../arch/i386/include/platform/mal/desc.h \
+  ../../../../include/types.h \
+  ../../../../arch/i386/include/platform/types.h \
+  ../../../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../../include/debug.h
+i8259.o: i8259.c ../../../../arch/i386/include/platform/mal/i8259.h \
+  ../../../../include/mal/ioport.h \
+  ../../../../arch/i386/include/platform/mal/ioport.h
+idt.o: idt.c ../../../../arch/i386/include/platform/mal/idt.h \
+  ../../../../arch/i386/include/platform/mal/desc.h \
+  ../../../../include/types.h \
+  ../../../../arch/i386/include/platform/types.h \
+  ../../../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../../include/debug.h ../../../../include/string.h
+interrupt.o: interrupt.c ../../../../include/mal/interrupt.h \
+  ../../../../arch/i386/include/platform/mal/idt.h \
+  ../../../../arch/i386/include/platform/mal/desc.h \
+  ../../../../include/types.h \
+  ../../../../arch/i386/include/platform/types.h \
+  ../../../../arch/i386/include/platform/mal/interrupt.h \
+  ../../../../arch/i386/include/platform/x86.h \
+  ../../../../include/autoconf.h \
+  ../../../../arch/i386/include/platform/mal/i8259.h \
+  ../../../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../../include/debug.h
+mal.o: mal.c ../../../../include/mal/mal.h \
+  ../../../../arch/i386/include/platform/mal/gdt.h \
+  ../../../../arch/i386/include/platform/mal/desc.h \
+  ../../../../include/types.h \
+  ../../../../arch/i386/include/platform/types.h \
+  ../../../../arch/i386/include/platform/mal/idt.h

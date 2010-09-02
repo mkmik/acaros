@@ -1,0 +1,47 @@
+boot_context.o: boot_context.c boot_context.h loader.h \
+  ../../../include/stand/stand.h ../../../include/types.h \
+  ../../../arch/i386/include/platform/types.h ../../../include/list.h \
+  ../../../arch/i386/include/platform/hat/page_allocator.h \
+  ../../../arch/i386/include/platform/hat/initial_paging.h \
+  ../../../include/mm/addressspace.h \
+  ../../../arch/i386/include/platform/x86.h ../../../include/autoconf.h \
+  ../../../arch/i386/include/platform/paging.h \
+  ../../../include/hat/initial_paging.h ../../../include/stand/libc.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../include/string.h multiboot.h tar.h ../../../include/log/log.h \
+  ../../../include/debug.h
+loader.o: loader.c loader.h ../../../include/hat/hat.h \
+  ../../../include/types.h ../../../arch/i386/include/platform/types.h \
+  ../../../arch/i386/include/platform/hat/initial_paging.h \
+  ../../../include/mm/addressspace.h \
+  ../../../arch/i386/include/platform/x86.h ../../../include/autoconf.h \
+  ../../../arch/i386/include/platform/paging.h \
+  ../../../include/hat/initial_paging.h ../../../include/stand/libc.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../include/string.h ../../../include/stand/stand.h \
+  ../../../include/list.h ../../../include/elf.h
+main.o: main.c ../../../include/autoconf.h loader.h \
+  ../../../include/stand/libc.h ../../../include/types.h \
+  ../../../arch/i386/include/platform/types.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../include/string.h ../../../include/stand/stand.h \
+  ../../../include/list.h multiboot.h boot_context.h \
+  ../../../arch/i386/include/platform/hat/page_allocator.h \
+  ../../../arch/i386/include/platform/hat/initial_paging.h \
+  ../../../include/mm/addressspace.h \
+  ../../../arch/i386/include/platform/x86.h \
+  ../../../arch/i386/include/platform/paging.h \
+  ../../../include/hat/initial_paging.h ../../../include/elf.h \
+  ../../../include/log/log.h ../../../include/debug.h
+multiboot.o: multiboot.c multiboot.h ../../../include/types.h \
+  ../../../arch/i386/include/platform/types.h \
+  ../../../include/stand/libc.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../include/string.h
+multiboot_header.o: multiboot_header.c multiboot.h \
+  ../../../include/types.h ../../../arch/i386/include/platform/types.h
+tar.o: tar.c ../../../include/types.h \
+  ../../../arch/i386/include/platform/types.h \
+  ../../../include/stand/libc.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../../include/string.h tar.h

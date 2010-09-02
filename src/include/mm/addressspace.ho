@@ -1,0 +1,82 @@
+/* -*- mode: c -*- */
+
+#ifndef _MM_ADDRESSSPACE_HO_
+#define _MM_ADDRESSSPACE_HO_
+
+#include <mm/addressspace.h>
+
+#include <algo/avl.h>
+#include <list.h>
+
+/** An AddressSpace istance contains the definition of an address space.
+ * It contains a list of regions also contained in a balenced tree for fast search.
+ * It handles page fault by looking in with region the fault address resides
+ * and after cheking permissions invokes his pageIn method.
+ * 
+ * The search for a matching range is done by having region objects stored in 
+ * a balanced binary tree (AVL) and having a custom matching function which
+ * matches a region by giving an address within its range.
+ *
+ * regions are maintained also in a linked list because the traversal of
+ * AVL tree is not yet implemented.
+ */
+@+class AddressSpace {
+  /** root of balanced tree containg regions ordered by address/size */
+  avl_node_t *root;
+  /** list of regions. traversal of AVL tree is not yet implemented  */
+  list_head_t regions;
+};
+
+/** A Region defines a contigous region of virtual memory with common attributes
+ * and a customized way to page in and out pages.
+ * 
+ * This is an abstract class; actual subclasses implement the required behavior.
+ */
+@+class Region {
+  /** starting address of the region */
+  pointer_t start;
+  /** length in bytes */
+  size_t length;
+  /** AVL node for storing Region objects inside the search tree 
+   * in AddressSpace\@root */
+  avl_node_t node;
+  /** list node used for storing Region objects inside the AddressSpace\@regions list */
+  list_head_t region_list;
+  /** region name. for now used only for debugging */
+  const char* name;
+  /** protection bits that apply to new pages within this region */
+  unsigned int protection;
+
+  // stand hack
+  bool_t standReserved;
+};
+
+/** tree insertion: order Region nodes using its starting address */
+avl_make_compare(Region_t, node, start);
+/** tree search: algorith variation that matches an object gived any address 
+ * within its range */
+static inline int Region_t_avlmatch(pointer_t k, Region_t *b) {   
+  if(k >= b@start && k < (b@start+b@length))
+    return 0;
+  else
+    return k < b->start ? -1 : 1;
+}
+
+/** Pages in this region will not be paged out once allocated.
+ * you can free them only explicitly with the ??? method */
+@+class DemandZeroNonPagedRegion : Region {
+};
+
+
+/** direct memory mapped devices (like vga frame buffer) */
+@+class DeviceRegion : Region {
+  /** start of the contiguos are of physical memory mapped by this region */
+  pointer_t physical_start;
+};
+
+/** The system address space. 
+ * Points to an AddressSpace object defining the "kernel" virtual memory regions */
+extern AddressSpace_t* systemAddressSpace;
+
+#endif
+

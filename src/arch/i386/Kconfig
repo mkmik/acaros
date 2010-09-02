@@ -1,0 +1,444 @@
+#
+# For a description of the syntax of this configuration file,
+# see Documentation/kbuild/kconfig-language.txt.
+#
+
+mainmenu "Acaros Kernel Configuration"
+
+menu "Processor type and features"
+
+choice
+	prompt "Processor family"
+	default M686
+
+config M386
+	bool "386"
+	---help---
+	  This is the processor type of your CPU. This information is used for
+	  optimizing purposes. In order to compile a kernel that can run on
+	  all x86 CPU types (albeit not optimally fast), you can specify
+	  "386" here.
+
+	  The kernel will not necessarily run on earlier architectures than
+	  the one you have chosen, e.g. a Pentium optimized kernel will run on
+	  a PPro, but not necessarily on a i486.
+
+	  Here are the settings recommended for greatest speed:
+	  - "386" for the AMD/Cyrix/Intel 386DX/DXL/SL/SLC/SX, Cyrix/TI
+	  486DLC/DLC2, UMC 486SX-S and NexGen Nx586.  Only "386" kernels
+	  will run on a 386 class machine.
+	  - "486" for the AMD/Cyrix/IBM/Intel 486DX/DX2/DX4 or
+	  SL/SLC/SLC2/SLC3/SX/SX2 and UMC U5D or U5S.
+	  - "586" for generic Pentium CPUs lacking the TSC
+	  (time stamp counter) register.
+	  - "Pentium-Classic" for the Intel Pentium.
+	  - "Pentium-MMX" for the Intel Pentium MMX.
+	  - "Pentium-Pro" for the Intel Pentium Pro.
+	  - "Pentium-II" for the Intel Pentium II or pre-Coppermine Celeron.
+	  - "Pentium-III" for the Intel Pentium III or Coppermine Celeron.
+	  - "Pentium-4" for the Intel Pentium 4 or P4-based Celeron.
+	  - "K6" for the AMD K6, K6-II and K6-III (aka K6-3D).
+	  - "Athlon" for the AMD K7 family (Athlon/Duron/Thunderbird).
+	  - "Crusoe" for the Transmeta Crusoe series.
+	  - "Winchip-C6" for original IDT Winchip.
+	  - "Winchip-2" for IDT Winchip 2.
+	  - "Winchip-2A" for IDT Winchips with 3dNow! capabilities.
+	  - "CyrixIII/VIA C3" for VIA Cyrix III or VIA C3.
+	  - "VIA C3-2 for VIA C3-2 "Nehemiah" (model 9 and above).
+
+	  If you don't know what to do, choose "386".
+
+config M486
+	bool "486"
+	help
+	  Select this for a x486 processor, ether Intel or one of the
+	  compatible processors from AMD, Cyrix, IBM, or Intel.  Includes DX,
+	  DX2, and DX4 variants; also SL/SLC/SLC2/SLC3/SX/SX2 and UMC U5D or
+	  U5S.
+
+config M586
+	bool "586/K5/5x86/6x86/6x86MX"
+	help
+	  Select this for an x586 or x686 processor such as the AMD K5, the
+	  Intel 5x86 or 6x86, or the Intel 6x86MX.  This choice does not
+	  assume the RDTSC (Read Time Stamp Counter) instruction.
+
+config M586TSC
+	bool "Pentium-Classic"
+	help
+	  Select this for a Pentium Classic processor with the RDTSC (Read
+	  Time Stamp Counter) instruction for benchmarking.
+
+config M586MMX
+	bool "Pentium-MMX"
+	help
+	  Select this for a Pentium with the MMX graphics/multimedia
+	  extended instructions.
+
+config M686
+	bool "Pentium-Pro"
+	help
+	  Select this for Intel Pentium Pro chips.  This enables the use of
+	  Pentium Pro extended instructions, and disables the init-time guard
+	  against the f00f bug found in earlier Pentiums.
+
+config MPENTIUMII
+	bool "Pentium-II/Celeron(pre-Coppermine)"
+	help
+	  Select this for Intel chips based on the Pentium-II and
+	  pre-Coppermine Celeron core.  This option enables an unaligned
+	  copy optimization, compiles the kernel with optimization flags
+	  tailored for the chip, and applies any applicable Pentium Pro
+	  optimizations.
+
+config MPENTIUMIII
+	bool "Pentium-III/Celeron(Coppermine)"
+	help
+	  Select this for Intel chips based on the Pentium-III and
+	  Celeron-Coppermine core.  This option enables use of some
+	  extended prefetch instructions in addition to the Pentium II
+	  extensions.
+
+config MPENTIUM4
+	bool "Pentium-4/Celeron(P4-based)"
+	help
+	  Select this for Intel Pentium 4 chips.  This includes both
+	  the Pentium 4 and P4-based Celeron chips.  This option
+	  enables compile flags optimized for the chip, uses the
+	  correct cache shift, and applies any applicable Pentium III
+	  optimizations.
+
+config MK6
+	bool "K6/K6-II/K6-III"
+	help
+	  Select this for an AMD K6-family processor.  Enables use of
+	  some extended instructions, and passes appropriate optimization
+	  flags to GCC.
+
+config MK7
+	bool "Athlon/Duron/K7"
+	help
+	  Select this for an AMD Athlon K7-family processor.  Enables use of
+	  some extended instructions, and passes appropriate optimization
+	  flags to GCC.
+
+config MK8
+	bool "Opteron/Athlon64/Hammer/K8"
+	help
+	  Select this for an AMD Opteron or Athlon64 Hammer-family processor.  Enables
+	  use of some extended instructions, and passes appropriate optimization
+	  flags to GCC.
+
+config MELAN
+	bool "Elan"
+
+config MCRUSOE
+	bool "Crusoe"
+	help
+	  Select this for Transmeta Crusoe processor.  Treats the processor
+	  like a 586 with TSC, and sets some GCC optimization flags (like a
+	  Pentium Pro with no alignment requirements).
+
+config MWINCHIPC6
+	bool "Winchip-C6"
+	help
+	  Select this for a IDT Winchip C6 chip.  Linux and GCC
+	  treat this chip as a 586TSC with some extended instructions
+	  and alignment requirements.
+
+config MWINCHIP2
+	bool "Winchip-2"
+	help
+	  Select this for a IDT Winchip-2.  Linux and GCC
+	  treat this chip as a 586TSC with some extended instructions
+	  and alignment requirements.
+
+config MWINCHIP3D
+	bool "Winchip-2A/Winchip-3"
+	help
+	  Select this for a IDT Winchip-2A or 3.  Linux and GCC
+	  treat this chip as a 586TSC with some extended instructions
+	  and alignment reqirements.  Development kernels also enable
+	  out of order memory stores for this CPU, which can increase
+	  performance of some operations.
+
+config MCYRIXIII
+	bool "CyrixIII/VIA-C3"
+	help
+	  Select this for a Cyrix III or C3 chip.  Presently Linux and GCC
+	  treat this chip as a generic 586. Whilst the CPU is 686 class,
+	  it lacks the cmov extension which gcc assumes is present when
+	  generating 686 code.
+	  Note, that Nehemiah (Model 9) and above will not boot with this
+	  kernel due to them lacking the 3dnow instructions used in earlier
+	  incarnations of the CPU.
+
+config MVIAC3_2
+	bool "VIA C3-2 (Nehemiah)"
+	help
+	  Select this for a VIA C3 "Nehemiah". Selecting this enables usage of SSE
+	  and tells gcc to treat the CPU as a 686.
+	  Note, this kernel will not boot on older (pre model 9) C3s.
+
+endchoice
+
+#
+# Define implied options from the CPU selection here
+#
+config X86_CMPXCHG
+	bool
+	depends on !M386
+	default y
+
+config X86_XADD
+	bool
+	depends on !M386
+	default y
+
+config X86_L1_CACHE_SHIFT
+	int
+	default "4" if MELAN || M486 || M386
+	default "5" if MWINCHIP3D || MWINCHIP2 || MWINCHIPC6 || MCRUSOE || MCYRIXIII || MK6 || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || M586 || MVIAC3_2
+	default "6" if MK7 || MK8
+	default "7" if MPENTIUM4
+
+config RWSEM_GENERIC_SPINLOCK
+	bool
+	depends on M386
+	default y
+
+config RWSEM_XCHGADD_ALGORITHM
+	bool
+	depends on !M386
+	default y
+
+config X86_PPRO_FENCE
+	bool
+	depends on M686 || M586MMX || M586TSC || M586 || M486 || M386
+	default y
+
+config X86_F00F_BUG
+	bool
+	depends on M586MMX || M586TSC || M586 || M486 || M386
+	default y
+
+config X86_WP_WORKS_OK
+	bool
+	depends on !M386
+	default y
+
+config X86_INVLPG
+	bool
+	depends on !M386
+	default y
+
+config X86_BSWAP
+	bool
+	depends on !M386
+	default y
+
+config X86_POPAD_OK
+	bool
+	depends on !M386
+	default y
+
+config X86_ALIGNMENT_16
+	bool
+	depends on MWINCHIP3D || MWINCHIP2 || MWINCHIPC6 || MCYRIXIII || MELAN || MK6 || M586MMX || M586TSC || M586 || M486 || MVIAC3_2
+	default y
+
+config X86_TSC
+	bool
+	depends on MWINCHIP3D || MWINCHIP2 || MCRUSOE || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || M586TSC || MK8 || MVIAC3_2
+	default y
+
+config X86_GOOD_APIC
+	bool
+	depends on MK7 || MPENTIUM4 || MPENTIUMIII || MPENTIUMII || M686 || M586MMX || MK8
+	default y
+
+config X86_INTEL_USERCOPY
+	bool
+	depends on MPENTIUM4 || MPENTIUMIII || MPENTIUMII || M586MMX
+	default y
+
+config X86_USE_PPRO_CHECKSUM
+	bool
+	depends on MWINCHIP3D || MWINCHIP2 || MWINCHIPC6 || MCYRIXIII || MK7 || MK6 || MPENTIUM4 || MPENTIUMIII || MPENTIUMII || M686 || MK8 || MVIAC3_2
+	default y
+
+config X86_USE_3DNOW
+	bool
+	depends on MCYRIXIII || MK7
+	default y
+
+config X86_OOSTORE
+	bool
+	depends on MWINCHIP3D || MWINCHIP2 || MWINCHIPC6
+	default y
+
+config X86_PREFETCH
+	bool
+	depends on MPENTIUMIII || MPENTIUM4 || MVIAC3_2
+	default y
+
+config X86_SSE2
+	bool
+	depends on MK8 || MPENTIUM4
+	default y
+
+config SMP
+	bool "Symmetric multi-processing support"
+	---help---
+	  This enables support for systems with more than one CPU. If you have
+	  a system with only one CPU, like most personal computers, say N. If
+	  you have a system with more than one CPU, say Y.
+
+	  If you say N here, the kernel will run on single and multiprocessor
+	  machines, but will use only one CPU of a multiprocessor machine. If
+	  you say Y here, the kernel will run on many, but not all,
+	  singleprocessor machines. On a singleprocessor machine, the kernel
+	  will run faster if you say N here.
+
+	  Note that if you say Y here and choose architecture "586" or
+	  "Pentium" under "Processor family", the kernel will not work on 486
+	  architectures. Similarly, multiprocessor kernels for the "PPro"
+	  architecture may not work on all Pentium based boards.
+
+	  People using multiprocessor machines who say Y here should also say
+	  Y to "Enhanced Real Time Clock Support", below. The "Advanced Power
+	  Management" code will be disabled if you say Y here.
+
+	  See also the <file:Documentation/smp.tex>,
+	  <file:Documentation/smp.txt>, <file:Documentation/i386/IO-APIC.txt>,
+	  <file:Documentation/nmi_watchdog.txt> and the SMP-HOWTO available at
+	  <http://www.linuxdoc.org/docs.html#howto>.
+
+	  If you don't know what to do here, say N.
+
+config X86_UP_APIC
+	bool "Local APIC support on uniprocessors" if !SMP
+	depends on !X86_VOYAGER
+	---help---
+	  A local APIC (Advanced Programmable Interrupt Controller) is an
+	  integrated interrupt controller in the CPU. If you have a single-CPU
+	  system which has a processor with a local APIC, you can say Y here to
+	  enable and use it. If you say Y here even though your machine doesn't
+	  have a local APIC, then the kernel will still run with no slowdown at
+	  all. The local APIC supports CPU-generated self-interrupts (timer,
+	  performance counters), and the NMI watchdog which detects hard lockups.
+
+	  If you have a system with several CPUs, you do not need to say Y
+	  here: the local APIC will be used automatically.
+
+config X86_UP_IOAPIC
+	bool "IO-APIC support on uniprocessors"
+	depends on !SMP && X86_UP_APIC
+	help
+	  An IO-APIC (I/O Advanced Programmable Interrupt Controller) is an
+	  SMP-capable replacement for PC-style interrupt controllers. Most
+	  SMP systems and a small number of uniprocessor systems have one.
+	  If you have a single-CPU system with an IO-APIC, you can say Y here
+	  to use it. If you say Y here even though your machine doesn't have
+	  an IO-APIC, then the kernel will still run with no slowdown at all.
+
+	  If you have a system with several CPUs, you do not need to say Y
+	  here: the IO-APIC will be used automatically.
+
+config X86_LOCAL_APIC
+	bool
+	depends on !SMP && X86_UP_APIC
+	default y
+
+config X86_IO_APIC
+	bool
+	depends on !SMP && X86_UP_IOAPIC
+	default y
+
+config NR_CPUS
+	int "Maximum number of CPUs (2-32)"
+	depends on SMP
+	default "32"
+	help
+	  This allows you to specify the maximum number of CPUs which this
+	  kernel will support.  The maximum supported value is 32 and the
+	  minimum value which makes sense is 2.
+
+	  This is purely to save memory - each supported CPU adds
+	  approximately eight kilobytes to the kernel image.
+
+
+config X86_MCE
+	bool "Machine Check Exception"
+	---help---
+	  Machine Check Exception support allows the processor to notify the
+	  kernel if it detects a problem (e.g. overheating, component failure).
+	  The action the kernel takes depends on the severity of the problem,
+	  ranging from a warning message on the console, to halting the machine.
+	  Your processor must be a Pentium or newer to support this - check the
+	  flags in /proc/cpuinfo for mce.  Note that some older Pentium systems
+	  have a design flaw which leads to false MCE events - hence MCE is
+	  disabled on all P5 processors, unless explicitly enabled with "mce"
+	  as a boot argument.  Similarly, if MCE is built in and creates a
+	  problem on some new non-standard machine, you can boot with "nomce"
+	  to disable it.  MCE support simply ignores non-MCE processors like
+	  the 386 and 486, so nearly everyone can say Y here.
+
+config X86_MCE_NONFATAL
+	bool "Check for non-fatal errors on AMD Athlon/Duron / Intel Pentium 4"
+	depends on X86_MCE
+	help
+	  Enabling this feature starts a timer that triggers every 5 seconds which
+	  will look at the machine check registers to see if anything happened.
+	  Non-fatal problems automatically get corrected (but still logged).
+	  Disable this if you don't want to see these messages.
+	  Seeing the messages this option prints out may be indicative of dying hardware,
+	  or out-of-spec (ie, overclocked) hardware.
+	  This option only does something on certain CPUs.
+	  (AMD Athlon/Duron and Intel Pentium 4)
+
+config X86_MCE_P4THERMAL
+	bool "check for P4 thermal throttling interrupt."
+	depends on X86_MCE && (X86_UP_APIC || SMP)
+	help
+	  Enabling this feature will cause a message to be printed when the P4
+	  enters thermal throttling.
+
+config MTRR
+	bool "MTRR (Memory Type Range Register) support"
+	---help---
+	  On Intel P6 family processors (Pentium Pro, Pentium II and later)
+	  the Memory Type Range Registers (MTRRs) may be used to control
+	  processor access to memory ranges. This is most useful if you have
+	  a video (VGA) card on a PCI or AGP bus. Enabling write-combining
+	  allows bus write transfers to be combined into a larger transfer
+	  before bursting over the PCI/AGP bus. This can increase performance
+	  of image write operations 2.5 times or more. Saying Y here creates a
+	  /proc/mtrr file which may be used to manipulate your processor's
+	  MTRRs. Typically the X server should use this.
+
+	  This code has a reasonably generic interface so that similar
+	  control registers on other processors can be easily supported
+	  as well:
+
+	  The Cyrix 6x86, 6x86MX and M II processors have Address Range
+	  Registers (ARRs) which provide a similar functionality to MTRRs. For
+	  these, the ARRs are used to emulate the MTRRs.
+	  The AMD K6-2 (stepping 8 and above) and K6-3 processors have two
+	  MTRRs. The Centaur C6 (WinChip) has 8 MCRs, allowing
+	  write-combining. All of these processors are supported by this code
+	  and it makes sense to say Y here if you have one of them.
+
+	  Saying Y here also fixes a problem with buggy SMP BIOSes which only
+	  set the MTRRs for the boot CPU and not for the secondary CPUs. This
+	  can lead to all sorts of problems, so it's good to say Y here.
+
+	  You can safely say Y even if your machine doesn't have MTRRs, you'll
+	  just add about 9 KB to your kernel.
+
+	  See <file:Documentation/mtrr.txt> for more information.
+
+endmenu
+
+source "kernel/Kconfig"
+

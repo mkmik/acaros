@@ -1,0 +1,206 @@
+/* -*- mode: c -*- */
+
+#include <mm/addressspace.ho>
+#include <mm/mm.h>
+#include <mm/pool.ho>
+#include <hat/hat.h>
+#include <log/log.h>
+#include <string.h>
+#include <platform/mm/addressspace.h>
+#include <platform/mal/idt.h>
+#include <platform/hat/initial_paging.h>
+#include <hat/initial_paging.h>
+#include <coinit.h>
+#include <stand/video.h>
+
+#include <stand/stand.h>
+
+@-AddressSpace@init() {
+  super@init();
+  @root = 0;
+  INIT_LIST_HEAD(&@regions);
+  @return self;
+}
+
+@-AddressSpace@add(Region_t *region) {
+  // some integrity tests:
+  Region_t* other;
+  pointer_t start = region@start;
+  size_t length = region@length;
+
+  other = (Region_t*)@regionForAddress(start);
+  if(other) {
+    @print();
+    panic("region collision at start (%s:%x, %s:%x)\n", 
+	  region@name, start, other@name, other@start);
+  }
+  other = (Region_t*)@regionForAddress(start + length);
+  if(other)
+    panic("region collision at end (%s:%x, %s:%x)\n", 
+	  region@name, start+length, other@name, other@start+other@length);
+
+  list_add_tail(&region->region_list, &@regions);
+  avl_add(&region->node, &@root, Region_t);
+
+  @return self;
+}
+
+@-AddressSpace@regionForAddress(pointer_t addr) {
+  @return avl_find(addr, @root, Region_t, node);
+}
+
+@-AddressSpace@print() {
+  list_head_t* entry;
+  list_for_each(entry, &@regions) {
+    Region_t* region = list_entry(entry, Region_t, region_list);
+    region@print();
+  }
+  @return self;
+}
+
+@-AddressSpace@pageFault(pointer_t addr, u_int32_t error, pointer_t eip) {
+  klogf(LOG_DEBUG, "Page fault at 0x%x, error 0x%x, eip 0x%x\n", addr, error, eip);
+  klogf(LOG_DEBUG, "reasion: ");
+  if(error & 0x1)
+    klogf(LOG_DEBUG, "present, ");
+  else
+    klogf(LOG_DEBUG, "not present, ");
+  if(error & 0x2)
+    klogf(LOG_DEBUG, "write, ");
+  else
+    klogf(LOG_DEBUG, "read, ");
+  if(error & 0x4)
+    klogf(LOG_DEBUG, "user\n");
+  else
+    klogf(LOG_DEBUG, "supervisor\n");
+
+  if(addr == 0) 
+    panic("Attempt to dereference NULL pointer");
+
+  Region_t* region = (Region_t*) @regionForAddress(addr);
+  if(!region)
+    panic("cannot find region: SIGSEGV\n");
+  
+  if(error & 0x2 && !(region@protection & PROT_WRITE))
+    panic("Attempt to write to a read only page: SIGSEGV");
+
+  if(!(error & 0x1))
+    region@pageIn((pointer_t)addr & ~0xFFF);
+  else {
+    panic("unknown error");
+  }
+
+  @return self;
+}
+
+@-Region@init(pointer_t start, size_t length) {
+  @start = start;
+  @length = length;
+  @protection = PROT_READ;
+  if(!@name)
+    @name = "unnamed";
+
+  // TODO don't use libstand anymore !
+  if(!@standReserved)
+    stand_reserveVirtualRange((void*)start, hat_sizeToPages(length), @protection, @name); 
+
+  @return self;
+}
+
+@-Region@print() {
+  klogf(LOG_DEBUG, "%s(0x%x->0x%x, '%s')\n", @_class->name, @start, @start+@length,
+	@name);
+  @return self;
+}
+
+@-Region@pageIn(pointer_t addr) {
+  panic("subclass responsibility: pageIn at 0x%x", addr);
+  @return self;
+}
+
+@-DemandZeroNonPagedRegion@pageIn(pointer_t addr) {
+  int res = hat_initialMapAnonPages(addr, 1, @protection, @name);
+  //  klogf(LOG_DEBUG, "allocating 1 page (0x%x -> 0x%x)\n", 
+  //	addr, hat_virtualToPhysical((void*)addr));
+  if(res == 0)
+    panic("failing to map anon page");
+  @return self;
+}
+
+@-DeviceRegion@init(pointer_t start, size_t length, 
+		    pointer_t pstart) {
+  super@init(start, length);
+  @physical_start = pstart;
+ 
+  hat_initialMapPages(@start, @physical_start, hat_sizeToPages(length), @protection, @name);
+  @return self;
+}
+
+@-DeviceRegion@print() {
+  klogf(LOG_DEBUG, "%s(0x%x->0x%x : 0x%x->0x%x '%s')\n", 
+	@_class->name, 
+	@start, @start+@length,
+	@physical_start, @physical_start+@length,
+	@name);
+  @return self;
+}
+
+//
+AddressSpace_t* systemAddressSpace;
+
+//
+
+void mm_addressspace_init() {
+  co_init();
+  systemAddressSpace = (AddressSpace_t*)AddressSpace@new();
+  mm_platform_addressspace_init();
+
+  mm_pool_init();
+}
+
+int cotest() {
+
+  Region_t* region;
+
+  region = (Region_t*)DemandZeroNonPagedRegion@new(0xe4100000, 0x2000);
+  region@protection = PROT_READ;
+  region->name = "readable test region";
+  systemAddressSpace@add(region);
+
+  int* test = (int*)0xe4100000;
+  pointer_t eip;
+  volatile int out;
+  asm("call 1f; 1: popl %0" : "=g"(eip));
+  klogf(LOG_DEBUG, "EIP 0x%x\n", eip);
+  klogf(LOG_DEBUG, "TESTING READ\n");
+  out = test[1];
+
+  klogf(LOG_DEBUG, "TEST ON WRITABLE REGION\n");
+
+  region = (Region_t*)DemandZeroNonPagedRegion@new(0xe4200000, 0x8000);
+  region->protection = PROT_READ | PROT_WRITE;
+  region->name = "writable test region";
+  systemAddressSpace@add(region);
+
+  test = (int*)0xe4200000;
+  int i;
+  
+  for(i=0; i<0x1000; i++)
+    test[i]++;
+
+  systemAddressSpace@print();
+
+  klogf(LOG_DEBUG, "ending cotest\n");
+
+  return 0;
+}
+
+void mm_initFramebuffer() {
+  void *base = stand_getNextFreeVirtual(stand_bootContext()->kernelBase,
+					PAGE_SIZE * 4);
+  Region_t *region = (Region_t*)DeviceRegion@new(base, PAGE_SIZE * 4, 
+				       (pointer_t)0xB8000);
+  region@name = "VGA";
+  systemAddressSpace@add(region);
+  video_setFramebufferBase(base);
+}

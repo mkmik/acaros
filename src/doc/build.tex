@@ -1,0 +1,248 @@
+\chapter{Build system}
+\label{ch:build}
+
+\section{Introduction}
+
+\acaros attempts to have a clean, easy to use and \emph{template free} build system.
+That means that unlike \emph{autoconf/automake}-like systems, the Makefiles are not
+dynamically generated, but instead they are a handful of very short and modular makefile scripts
+which are included from a 3-4 line makefile in every directory. 
+
+The makefile in most directories need not to be changed, even when adding source files,
+so simplifying the version control and branch merging.
+
+\section{Version control}
+
+\textsf{Subversion}\footnote{http://svnbook.red-bean.com/svnbook/} was chose to host the project, because \ldots you will find out using it.
+
+Repository access requires SSH access for now.
+The repository path is:
+
+\begin{verbatim}
+  svn+ssh://sottosale.net/home/users/kaos/repos/acaros/trunk/
+\end{verbatim}
+
+Basic subversion commands description assumes the \textsf{REPOS} to be set
+to the value of the repository path shown above.
+
+\paragraph{Checking out}
+\begin{verbatim}
+  svn co $REPOS acaros
+\end{verbatim} % $
+
+This will create a subdirectory called \textsf{acaros} the current directory.
+Obviously you could named as you like.
+
+This directory will be a \emph{working dir}.
+
+\paragraph{Updating}
+\begin{verbatim}
+  svn update
+  svn up
+\end{verbatim}
+
+Will fetch new releases from the server.
+
+\paragraph{Getting status}
+\begin{verbatim}
+  svn status
+  svn st
+\end{verbatim}
+
+Will list in what state the files in the in the working dir in respect of
+the lastly updated revision in the repository''
+
+\begin{description}
+\item[?] not versioned
+\item[!] missing
+\item[M] locally modified
+\item[D] locally deleted
+\item[A] locally added
+\item[L] locked
+\end{description}
+
+\ldots
+
+\paragraph{Adding files and directories}
+\begin{verbatim}
+  svn add (file|dir)*
+  svn add myfile.c mydir
+\end{verbatim}
+
+\paragraph{Renaming files and directories}
+\begin{verbatim}
+  svn mv oldName newName
+  svn mv blabla/dir1 there/dirzz
+\end{verbatim}
+
+\textbf{Major feature}. This feature is the most important improvement over CVS.
+
+\paragraph{Ignore some files}
+\begin{verbatim}
+  svn propedit svn:ignore dir1
+  svn propget svn:ignore dir1 | 
+    svn propset svn:ignore -F /dev/stdin dir2
+\end{verbatim}
+
+Allows to specify filters (like *.a) to compilation products or other files
+that you don't want to be versioned (or to produce the annoying ``?'' in \textsf{svn status})
+
+\section{Makefiles}
+
+Most makefiles (except src/Makefile, src/kernel/Makefile, \ldots) are very short and duplicate
+the bare minimum.
+
+The only part which changes is list of subdirectories which will be recursively traversen in the
+build phase.
+
+This subdirectories are called \emph{subsystems} and defined in the \textsf{SUBSYSTEM-y} variable.
+Makefiles need only to append the named of the subdirectories that should be processed
+according to the current configuration. This is done using the following trick:
+
+\begin{verbatim}
+  SUBSYSTEMS-y += log mm
+  SUBSYSTEMS-$(CONFIG_KDB) += kdb  
+\end{verbatim} % $
+ 
+\noindent In this example the subsystems \texttt{log} and \texttt{mm} are forcefully enable 
+while the subsystem \texttt{kdb} will be enabled only if the variable \texttt{CONFIG\_KDB}
+evaulates to ``\texttt{y}''.\footnote{defined in \textsf{.config} if enabled from menu}
+
+
+\section{Configuration}
+
+The \acaros compilation can be tailored with optional parameters using a ncurses menu driven interface, using a simple \texttt{make config} command.
+
+The program that handles this configuration was ``stolen'' from the linux build system.
+
+It basically works parsing the \textsf{Kconfig} files and generating a \textsf{.config} and 
+an \textsf{include/autoconf.h} file. \textsf{.config} will be included in every makefile
+while \textsf{autoconf.h} will be include by source files if the implement some feature 
+conditionally.
+
+Makefiles can conditionally include subdirectories in the subsystem path for the module;
+this way for example the kernel debugger will not even be compiled if you don't enable it.
+
+\section{Build}
+
+A simple \texttt{make} invocation should build the whole kernel according to current configuration.
+
+The default \textsf{make} target doesn't include a dependency tree generation because it's slow
+and is left to manual use. So unless you don't issue a \texttt{make deps} modifying a header
+file will not recompile the dependent C files. 
+
+Some times, when the dependency is not enough
+and a complete rebuild is needed, a handy command \texttt{make rebuild} does the job for you,
+a complete clean,deps,make,install pass.
+
+The build system build the two main components of the system
+leaving them at their original locations (\textsf{arch/\${ARCH}/loader/loader} and
+\textsf{kernel/kernel} \textsf{kernel/acaros.tar.gz}. The kernel image is encapsulated
+in a tar archive with other boot modules and drivers. On boot this tar archive is opened
+by the loader which locates the kernel and loads it.\footnote{This way the multiboot
+command line can stay short.}
+
+\section{Installation}
+
+Since \acaros development cycle is intended to be fast and with extensive testing
+of every line of code\footnote{a sort of extreme programming but less extremist}, 
+there must be a way to quikly install and boot the target system.
+
+\subsection{Emulators}
+One way to quickly test \acaros is to use an emulator like \textsf{bochs} or \textsf{vmware},
+\subsubsection{Vmware}
+Works. Network + vesa too.
+
+The build system assumes you have your virtual machine in \textsf{~/vmware/acaros}
+\footnote{Actually instead of \textsf{acaros} it searches the current branch name,
+that is the name of the toplevel directory (the one below \textsf{src}).},
+and it's important for serial port redirection, used mostly by the kernel debugger.
+
+Important vmware configuration are:
+\begin{description}
+\item[Memory] choose whatever you want. \acaros assumes >1.5, but just for now.
+\end{description}
+
+\subsubsection{Bochs}
+
+Works but hangs on kernel debugger.
+
+The \textsf{.bochsrc} file is provided. 
+
+It boots only using the floppy image.
+
+\subsubsection{qemu}
+
+It doesn't work with \acaros \ldots 
+
+\subsection{Booting \acaros}
+
+There are basically two ways quickly prepare to boot \acaros:
+\begin{itemize}
+\item floppy images
+\item network booting
+\end{itemize}
+
+\texttt{make install} will automatically reckognize which boot system is enabled
+\footnote{By looking if the floppy image is mounted, or a tftp directory is present} and
+install the kernel in the right places. 
+
+This magic needs some collaboration however, as explained in the next sections:
+
+\subsubsection{Floppy image}
+
+You need a floppy image with grub installed on it. You can download one 
+from http://www.acari.org/download/acaros.img 
+
+Once you put this file in the root of the build system you can now
+choose to mount it manually or using the \texttt{make loop\_mount} command
+which exploits the \texttt{sudo} command, and mounts the image in loopback for you.
+
+The image should be mounted in the \textsf{image} directory so that \texttt{make install}
+can find it.
+
+The \textsf{support} directory contains an example grub configuration file.
+
+\subsubsection{Network boot}
+
+\texttt{make install} searches a \textsf{/home/tftp} directory and if it exists
+it copies the kernel and the loader in it. 
+
+Since grub is needed to boot the kernel you need to compile \textsf{pxegrub} and 
+configure \textsf{dhcp} and \textsf{in.tftpd} to run it for the MAC associated
+with your testing machine.\footnote{real or emulated (vmware can boot from pxe as of version 4.5)}
+
+The \textsf{support} directory contains an example grub configuration file for network boot.
+
+\section{Debugging}
+
+The kernel is by default compiled with all debugging symbols enabled.
+
+The build system helps also debugging by implementing a \textsf{make debug} command
+which installs the kernel, spawns a \emph{gdbredirector} and a gdb instance.
+
+You need only to attach to the tcp port 1235, if you use VMware, with:
+
+\begin{verbatim}
+  target remote :1235
+\end{verbatim}
+
+\noindent or directly to the serial port
+
+\begin{verbatim}
+  target remote /dev/ttyS0
+\end{verbatim}
+
+\noindent and you will attach a running kernel through the serial port.
+
+VMware can bind an emulated serial port to an unix domain socket (which he calls incorrectly \emph{pipe}). The \texttt{gdbredirector} program converts TCP/IP from gdb to unix domain socket on the vmware side.\footnote{It can also be used for analyzing the gdb protocol}
+
+\section{Documentation}
+
+This documentation is located in \textsf{src/doc} and is builded with a simple \textsf{make}.
+The reference manual is build using \textsf{make api}, and it outputs \textsf{api/html} and \textsf{api/latex}. If you want to generate the pdf reference manual you should do another \textsf{make} inside \textsf{src/doc/api/latex}.
+
+\section{Implementation}
+
+TODO \ldots
+

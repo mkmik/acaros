@@ -1,0 +1,46 @@
+/* -*- mode: c -*- */
+
+#ifndef _MM_POOL_HO_
+#define _MM_POOL_HO_
+
+#include <mm/pool.h>
+#include <mm/addressspace.ho>
+
+/** A pool is a region of memory witch can reserve ranges 
+ * of memory inside itself. 
+ *  The range allocator implemented uses a list of page sized 
+ * metadata containers caleld "chunks" which in turn contains 
+ * metadata called "slots" with describe the used and free 
+ * space in the pool.
+ * 
+ **/
+@+class Pool : DemandZeroNonPagedRegion {
+  /** chunk list */
+  list_head_t chunks;
+  /** list of free space.
+   * points to allocated slots of the "free" type */
+  list_head_t freeList;
+  /** tree of used space.
+   * points to allocated slots of the "used" type
+   */
+  avl_node_t *usedRoot;
+};
+
+extern Pool_t *nonPagedPool;
+
+// pseudo private
+
+/** initializes a chunk. all slots are put in the free slot list */
+void pool_initChunk(pool_chunk_t *ch);
+/** alloc a slot in a specific chunk */
+pool_slot_t *pool_chunk_allocSlot(pool_chunk_t *ch);
+/** alloc a slot from a chunk chain, eventually adding a new chunk to the chain */
+pool_slot_t *pool_allocSlot(Pool_t *pool);
+/** allocs a slot, initializes it as a "used" slot and adds it to the used AVL tree */
+pool_slot_t* pool_createUsedSlot(Pool_t *self, pointer_t start, size_t length);
+/** creates a new used slot occuping the first "size" bytes (should be page aligned!)
+ * of the free range and moves the start of the free range by "size" byetes forward 
+ *  This is the heart of the range allocation algorithm (simple) */
+pointer_t pool_allocRangeInFreeSlot(Pool_t *self, pool_slot_t *freeSlot, size_t size);
+
+#endif

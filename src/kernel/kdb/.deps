@@ -1,0 +1,52 @@
+command.o: command.c ../../include/kdb/command.h ../../include/algo/avl.h \
+  ../../include/kdb/gdb.h ../../include/kdb/kdb.h \
+  ../../include/mal/interrupt.h \
+  ../../arch/i386/include/platform/mal/idt.h \
+  ../../arch/i386/include/platform/mal/desc.h ../../include/types.h \
+  ../../arch/i386/include/platform/types.h \
+  ../../arch/i386/include/platform/kdb/kdb.h ../../include/kdb/packet.h \
+  ../../include/kdb/uart.h ../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../include/debug.h
+gdb.o: gdb.c ../../include/kdb/gdb.h ../../include/kdb/kdb.h \
+  ../../include/mal/interrupt.h \
+  ../../arch/i386/include/platform/mal/idt.h \
+  ../../arch/i386/include/platform/mal/desc.h ../../include/types.h \
+  ../../arch/i386/include/platform/types.h \
+  ../../arch/i386/include/platform/kdb/kdb.h \
+  ../../arch/i386/include/platform/kdb/uart.h \
+  ../../arch/i386/include/platform/kdb/i16550A.h \
+  ../../arch/i386/include/platform/mal/interrupt.h \
+  ../../arch/i386/include/platform/x86.h ../../include/autoconf.h \
+  ../../include/kdb/packet.h ../../include/kdb/command.h \
+  ../../include/algo/avl.h ../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../include/debug.h
+kdb.o: kdb.c ../../include/kdb/kdb.h ../../include/mal/interrupt.h \
+  ../../arch/i386/include/platform/mal/idt.h \
+  ../../arch/i386/include/platform/mal/desc.h ../../include/types.h \
+  ../../arch/i386/include/platform/types.h ../../include/kdb/packet.h \
+  ../../include/kdb/command.h ../../include/algo/avl.h \
+  ../../include/kdb/gdb.h ../../arch/i386/include/platform/kdb/kdb.h \
+  ../../arch/i386/include/platform/mal/interrupt.h \
+  ../../arch/i386/include/platform/x86.h ../../include/autoconf.h \
+  ../../arch/i386/include/platform/hat/initial_paging.h \
+  ../../include/mm/addressspace.h \
+  ../../arch/i386/include/platform/paging.h ../../include/kdb/uart.h \
+  ../../include/misc.h ../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../include/debug.h ../../include/mm/mm.h ../../include/mm/pool.h \
+  ../../include/list.h
+packet.o: packet.c ../../include/kdb/kdb.h ../../include/mal/interrupt.h \
+  ../../arch/i386/include/platform/mal/idt.h \
+  ../../arch/i386/include/platform/mal/desc.h ../../include/types.h \
+  ../../arch/i386/include/platform/types.h ../../include/kdb/uart.h \
+  ../../include/kdb/packet.h
+uart.o: uart.c ../../include/kdb/kdb.h ../../include/mal/interrupt.h \
+  ../../arch/i386/include/platform/mal/idt.h \
+  ../../arch/i386/include/platform/mal/desc.h ../../include/types.h \
+  ../../arch/i386/include/platform/types.h ../../include/kdb/uart.h \
+  ../../include/log/log.h \
+  /usr/lib/gcc-lib/i686-pc-linux-gnu/3.3.2/include/stdarg.h \
+  ../../include/debug.h ../../arch/i386/include/platform/kdb/uart.h \
+  ../../arch/i386/include/platform/kdb/i16550A.h

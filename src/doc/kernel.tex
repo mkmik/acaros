@@ -1,0 +1,101 @@
+\chapter{Kernel}
+
+\section{Introduction}
+
+\section{Building}
+
+The kernel is built as a normal ELF static executable without standard libraries. 
+A linux compiler can produce suitable format and code. 
+
+The kernel is linked to run in the upper virtual memory area (should be configurable
+but now at 0xe0000000, 3.5 GB). The loader reads the addresses in the ELF header (which can be inspected with \textsf{objdump} and allocates and copies the kernel text and data segments in the allocated
+virtual memory regions. 
+
+
+\section{Boot}
+
+The kernel, when executed, runs directly with virtual memory enabled.\footnote{Set up by the loader
+or on some architecture by the boot firmware}
+
+The kernel entry point is it's \textsf{\_start} function.
+The loader passes a structure that describes the arguments, the physical and virtual memory
+maps, the loaded modules and other things.\footnote{Vesa informations, for example on PCs.}
+
+Then vital builtin modules are initialized (\textsf{mal}, 
+\textsf{kdb}\footnote{Optional.}, \textsf{mm}, \textsf{co}, \textsf{drivers}\footnote{in \textsf{ultrabug branch}}) and then the kernels friendly panics.
+
+That's all folks :-)
+
+\section{KDB}
+
+The kernel debugger is a little and tricky part of the kernel. It implements the \textsf{gdb}
+serial protocol and implements stopping, resuming, breakpointing, single stepping, memory and register reading and writing.
+
+Using this simple primitives \textsf{gdb} can implement full source level debugging.
+
+I/O through the serial is handled using a builting driver inside the kdb in order to not depend on the rest of the kernel. I/O is interrupt driven and character based. 
+
+See the info page for gdb under ``* Remote Protocol::'' for detailed description of the protocol.
+
+One of the design rules of \textsf{kdb} was that it must use a fixed amount of memory
+and be able to handle big requests without allocating memory for buffers.
+
+\emph{So it was implemented using a state machine that accept characters at imput and depending
+on the character changes the state. This is very good for parsing the packet,
+ parsing hexadecimal addresses but showed to be quite difficult to maintain design rule
+if gdb askes us to write big amounts of memory, and passes a big stream of data, and
+of course if gdb doesn't ask us to do so, then what's about implementing it as a state machine at all? pure mental masturbation?}
+
+\subsection{Interruption, resumption}
+
+Since the reception of characters is interrupt driven we can interrupt the kernel 
+whatever it is doing if we got a special condition:
+
+\begin{enumerate}
+\item First time the debugger sent a valid packet (debugger is attacching)
+\item Debugger sent character 0x3 (INT)
+\item A breakpoint exception occour (int 3)
+\item A single step condition occour (int 1)
+\end{enumerate}
+
+\noindent In order to block the kernel indefinitely in this cases, kdb simply never returns
+from the interrupt handler but spins on a global variable waiting it to change state.
+
+Resetting this variable the interrupted kernel will continue to execute as nothing happens
+because the serial port interrupt or breakpoint interrupt has saved all the state and will restore it upon return.
+
+This loop can be interrupted only by other serial port interrupts which eventually
+can resume the execution later on.
+
+\subsection{Program state}
+
+Gdb needs to know the current state of the machine registers every time the target stops.
+
+Kdb can send the content of the registers ``on demand'' responding to the ``\texttt{G}'' gdb command
+or it can feed gdb with the information of the most important registers directly when reporting
+that software is stopped, with the ``\texttt{T}'' packet (see gdb manual).
+
+In any case it must access the state saved on interrupt. \textsf{mal} handles this
+very conveniently using a short assembler wrapper in front of every interrupt handler
+which pushes on the stack all the registers so that you can access them from C using
+\textsf{mal\_trapFrame} (on x86). Modifing this registers has a real effect of modifying
+the registers of the real program once resumed. For example single step is enabled
+updating the saved \textsf{eflags} register image setting the \textsf{trace} bit.
+
+
+\subsection{Tricks \& details}
+
+When executing an breakpoint instruction, on resume the CPU will issue again the
+same instruction. This is correct, because normally gdb will handle this situation
+deleting the breakpoint and resetting it later, but if the breakpoint is generated
+inside the kernel, for example by a panic or manual debugging, before returning
+from the breakpoint interrupt we must check whether the breakpoint instruction is still
+there and if it is it means that gdb has not set this break point, so we must skip it.
+(incrementing the instruction pointer)
+
+\subsection{Performance issues}
+
+\todo
+
+Reading and writing is done using byte by byte page protection checking and this could be optimized
+

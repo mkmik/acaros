@@ -1,0 +1,11 @@
+1)
+
+ effect: after a memset with random data to the non paged pool, 
+   the null page is unprotected and points to a random physical page
+
+ cause: not all the physical memory is inserted in libstand virtual segments 
+  (at least: page directories), and sits in the pfd free list .....
+
+ probably because of a bug in the getNextFreeVirtual or in the way this function
+ is being called from initialAnonMap to avoid duplicate reservation...
+  when reserving manually the problem doesn't existo

@@ -1,0 +1,219 @@
+/* -*- mode: c -*- */
+
+#include <mm/slab/slab.h>
+#include <log/log.h>
+#include <mm/pool.ho>
+#include <mm/dma.ho>
+#include <platform/paging.h>
+
+slab_cache_t slab_cache_cache;
+slab_size_cache_t slab_size_cache[13];
+slab_size_cache_t slab_size_cacheDma[13];
+avl_node_t *slab_sizeRoot;
+avl_node_t *slab_sizeRootDma;
+
+static int slab_debug = 0;
+
+void* slab_cache_constructor(void* data, size_t size) {
+  assert(data);
+  assert(size > 0);
+  assert(size == sizeof(slab_cache_t));
+
+  slab_cache_t *cache = (slab_cache_t*)data;
+
+  INIT_LIST_HEAD(&cache->slabs_full);
+  INIT_LIST_HEAD(&cache->slabs_partial);
+  INIT_LIST_HEAD(&cache->slabs_free);
+  cache->slabMapRoot = 0;
+  cache->flags = 0;
+  cache->gfporder = 0;
+  cache->constructor = 0;
+
+  return cache;
+}
+
+slab_slab_t* slab_slab_init(slab_cache_t* cache, slab_slab_t* slab) {
+  assert(cache);
+  assert(slab);
+
+  slab->cache = cache;
+  slab->inuse = 0;
+  slab->free = 0;
+  slab->mem = (void*)((pointer_t)(slab + 1) + sizeof(slab_bufctl_t) * cache->num);
+  int i;
+  for(i=0; i<cache->num; i++) {
+    slab->buffs[i] = i + 1;
+  }
+  if(cache->constructor)
+    for(i=0; i<cache->num; i++)
+      cache->constructor(slab->mem + i * cache->objsize, cache->objsize);
+
+  slab->buffs[cache->num - 1] = BUFCTL_END;
+
+  // TODO find a better place
+  list_add(&slab->list, &cache->slabs_free);
+  slab->slabMap = null_avl_node;
+  avl_add(&slab->slabMap, &cache->slabMapRoot, slab_slab_t);
+
+  return slab;
+}
+
+slab_slab_t* slab_create_slab(slab_cache_t* cache) {  
+  assert(cache);
+
+  int pages = 1 << cache->gfporder;
+  
+  Pool_t *pool;
+  if(cache->flags == SLAB_DMA)
+    pool = (Pool_t*)dmaPool;
+  else
+    pool = nonPagedPool;
+
+  slab_slab_t *slab = (slab_slab_t*) pool@allocRange(pages);
+  if(!slab)
+    panic("slab: cannot allocate memory for slab");
+
+  slab_slab_init(cache, slab);  
+  
+  return slab;
+}
+
+void slab_init() {
+  slab_cache_constructor(&slab_cache_cache, sizeof(slab_cache_t));
+  slab_cache_cache.objsize = sizeof(slab_cache_t);
+  slab_cache_cache.gfporder = 1;
+  slab_cache_cache.num = 127;
+  slab_cache_cache.name = "slabCache";
+  slab_cache_cache.constructor = slab_cache_constructor;
+
+  slab_sizeRoot = 0;
+  slab_sizeRootDma = 0;
+  int i;
+  int size = 32;
+  for(i=0; i<sizeof(slab_size_cache)/sizeof(slab_size_cache_t); i++) {
+    slab_size_cache[i].size = size;
+    slab_size_cache[i].node = null_avl_node;
+    avl_add(&slab_size_cache[i].node, &slab_sizeRoot, slab_size_cache_t);
+    slab_size_cache[i].cache = slab_createCache("sizespecific", size, 4, 0, 0, 0);
+
+    slab_size_cacheDma[i].size = size;
+    slab_size_cacheDma[i].node = null_avl_node;
+    avl_add(&slab_size_cacheDma[i].node, &slab_sizeRootDma, slab_size_cache_t);
+    slab_size_cacheDma[i].cache = slab_createCache("sizespecificDma", size, 4, SLAB_DMA, 0, 0);
+
+
+    
+    size = size << 1;
+  }
+
+  klogf(LOG_DEBUG, "allocating from cache of size %d: %p\n",
+	slab_size_cache[4].size,
+	slab_alloc(slab_size_cache[4].cache, 0));
+  
+
+  klogf(LOG_DEBUG, "MALLOC %p\n", slab_malloc(4123, SLAB_NORMAL));
+  klogf(LOG_DEBUG, "MALLOC DMA %p\n", slab_malloc(4123, SLAB_DMA));
+}
+
+#define slab_bufctl(slabp) \
+         ((slab_bufctl_t *)(((slab_slab_t*)slabp)+1))
+
+void* slab_allocFromSlab(slab_cache_t *cache, slab_slab_t* slab, unsigned int flags) {
+  slab->inuse++;
+  void *obj = slab->mem + slab->free * cache->objsize;
+  assert(slab->free != BUFCTL_END);
+  slab->free = slab_bufctl(slab)[slab->free];
+
+  // check end of bufctl conditions ...
+  if(slab->free == BUFCTL_END) {
+    list_del(&slab->list);
+    list_add(&slab->list, &cache->slabs_full);
+  }
+
+  return obj;
+}
+
+void* slab_alloc(slab_cache_t* cache, unsigned int flags) {
+  if(list_empty(&cache->slabs_partial)) {
+    if(list_empty(&cache->slabs_free)) {
+      slab_create_slab(cache);
+    }
+    // move to partial slab list because at least 
+    // one object will be allocated rigth now
+    list_head_t *tmp;
+    list_del(tmp = cache->slabs_free.next);
+    list_add(tmp, &cache->slabs_partial);
+  }
+  
+  slab_slab_t *slab = list_entry(cache->slabs_partial.next, slab_slab_t, list);
+  return slab_allocFromSlab(cache, slab, flags);
+}
+
+slab_cache_t* slab_createCache(char* name, size_t size, int align,
+			       int flags,
+			       void *(*constructor)(void*, size_t),
+			       void *(*destructor)(void*, size_t)) {
+  slab_cache_t* cache = slab_alloc(&slab_cache_cache, 0);
+  cache->name = name;
+  cache->objsize = size;
+  cache->gfporder = slab_computePageOrder(size);
+  cache->num = slab_cacheEstimate(size, cache->gfporder, 0);
+  cache->flags = flags;
+
+  return cache;
+}
+
+int slab_cacheEstimate(size_t size, unsigned int order, unsigned int *w) {
+  int wastage = PAGE_SIZE << order;
+  wastage -= sizeof(slab_slab_t);
+  int num = wastage / (size + sizeof(slab_bufctl_t));
+  wastage -= num * (size + sizeof(slab_bufctl_t));
+  
+  if(w)
+    *w = wastage;
+  return num;
+}
+
+int slab_computePageOrder(size_t size) {
+  int order = 0;
+  int wastage = 0;
+  int num = 0;
+  do {
+    num = slab_cacheEstimate(size, order, &wastage);
+
+    if(order>= SLAB_MAX_GFP_ORDER)
+      break;
+
+    if(num == 0)
+      continue;
+    
+    if((wastage*8) <= (PAGE_SIZE * order))
+      break; // linux says that it's an acceptable internal fragmentation
+    
+  } while(++order);
+
+  return order;
+}
+
+void* slab_malloc(size_t size, unsigned int flags) {
+  int order = 0;
+  int s = size;
+  while((s >>= 1))
+    order++;
+  if(size % (1 << order))
+    order++;
+
+  avl_node_t *root = slab_sizeRoot;
+  if(flags & SLAB_DMA)
+    root = slab_sizeRootDma;
+
+  slab_size_cache_t *scache = avl_find(1 << order, root, slab_size_cache_t, node);
+
+  if(!scache)
+    panic("cannot find size cache");
+  slab_debug = 1;
+  return slab_alloc(scache->cache, 0);
+}
+
+void slab_mfree(void* addr) {
+}

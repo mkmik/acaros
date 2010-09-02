@@ -1,0 +1,17 @@
+/* -*- mode: c -*- */
+
+#include <mm/addressspace.ho>
+#include <platform/mal/idt.h>
+#include <log/log.h>
+
+static void pageFault(mal_vector_t vector, mal_trapFrame_t frame) {
+  pointer_t addr;
+  asm("mov %%cr2, %0" : "=r"(addr));
+
+  systemAddressSpace@pageFault(addr, frame.withError.error, frame.withError.eip);
+}
+
+
+void mm_platform_addressspace_init() {
+  mal_attachException(14, pageFault);
+}

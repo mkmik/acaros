@@ -1,0 +1,151 @@
+\chapter{Introduction}
+
+\acaros\ is an operating system kernel targeted for workstation and server class
+machines. The design permits easy ports to embedded class machines but this
+document will focus only on the implementation on mid/high range machines
+which include MMU (virtual memory), privilege separation (kernel/user),
+external bus (PCI, \ldots), DMA, and programmable interrupt controllers.
+
+\acaros will be the kernel of the \kaos project which will build an complete system
+based on \acaros.
+
+\section{Design notes}
+
+\acaros\ does not follow any schoolbook design. It is not a microkernel
+design but neither a monolithic UNIX style kernel. \acaros design
+goal is to merge microkernel concepts with performance needs
+allowing processes to run inside kernel space or user space using basically
+the same API, thus allowing easier developing and debugging in user space
+and increased security for untested drivers or extensions\footnote{expecially third
+party}, while maintaining breakthrough performance for critical path code
+like server networking and filesystem operation. 
+
+The design allows an administrator (or an end user though the installer program)
+to choose the level of protection vs. performance, moving in and out modules from
+user to kernel. 
+
+As stated before this is the design goal, not necessarly the goal for the first implementation,
+but many design decisions are influenced by that.
+
+Other design decision is to clearly protocolize intra-module and intra-layer
+communication reducing the binary incompatibility between different releases/builds
+\footnote{Like linux, most notably}. Object oriented message passing is choosen
+to implement this abstraction.
+ 
+We have developed a very simple and limited object oriented extension to 
+the C language: CO\footnote{The acronym is open to free interpretation, from \emph{C object}
+to \emph{Che cazzO}}.
+ It is similar to Objective C but with less emphasis on smalltalk emulation
+and with far simpler implementation and with less features. The lack of advanced OO programming
+techniques available to the kernel programmer should help him avoid the
+abuse of OO in time critical applications such the kernel and keep clear
+the releationship between objects, methods and backing memory.
+The CO compiler\footnote{coc} is implemented as a preprocessor to C.
+
+No existing object oriented programming language was well suited for kernel
+core development, partially because it we found difficulties porting the language runtime
+without basic OS support and also we would loose compatibility with the mainstream
+compiler at each new version. We didn't want force users to use a specific version
+of the C compiler nor special build tools or compilers.
+ For now we only assume the GNU tool chain and use some of its peculiarities
+ but it the future a more compiler agnostic approach will be tried.\footnote{Is not so 
+easy to be compiler agnostic without the use of too much conditional compilation\ldots}
+
+GNU C was choosen for infinite reasions. Portability is granted by
+the widespread use of the GNU C Compiler and its infinite incarnations
+for practically every known CPU. Explicit use of GNU C extensions
+was choosen above macros with compiler specific code to avoid preprocessor
+junk and improve readability.
+
+\section{Virtual memory}
+\acaros\ kernel uses paged virtual memory for all memory management
+and does not direct map physical memory as other OS do\footnote{Linux
+maps all physical memory in the kernel address space. The consequence
+of this design is that the amount of physical memory is restricted
+to 1GB/2GB/2GB (depends on kernel configuration: more address space
+to user mode processes, less physical memory available). Recent patches
+relax this limitation at cost of performance and code readability.}.
+
+The virtual memory management is conceptually similar to those from
+\windows\ NT and \solaris, but is not meant to be compatible with them.
+
+\acaros\ is a modern OS and thus implements the common memory management
+functinos like memory sharing, copy-on-write, memory mapped files, device memory mapping,
+demand paging, shared mem IPC and zero copy IO (networking).
+
+Platform dependent page structure handling is done throgh a dedicated
+HAT (Hardware Address Translation) layer, part of the MAL (Machine Abstraction Layer)
+\footnote{from an latin stem which means \emph{evil} with an italian acception of \emph{pain}, which is very well suited in hardware related stuff\ldots}.
+ Platform independent code does not access directly page structures through
+macros like linux for example, thus it is not necessary to emulate a three level
+page structure like it does. 
+
+\section{Bootstrap}
+
+The execution of \acaros\ is divided basically in two parts:
+
+\begin{enumerate}
+\item loading kernel
+\item executing kernel
+\end{enumerate}
+
+\noindent it seems obvious but it depends on what we mean for ``loading''
+the kernel:
+
+The kernel itself uses memory resources for its code, data and stack
+but the memory management (and paging) is not yet initialized when the kernel is first run.
+ One approach would be to put a careful written assembly and C code which prepares 
+memory management structures and initialize paging, in order to pass the execution
+to the kernel once its living in the right address space\footnote{More information about that at
+ \ref{booting-strategies}}.
+
+\acaros\ instead uses an intelligent loader which loads the kernel at the
+right virtual addresses contained in its executable image\footnote{Currently ELF is choosen}, 
+like any other program, initializing paging and keeping track of each physical and virtual
+memory allocation and passing a structure describing the memory layout to the kernel.
+ The kernel can then go on and still use loader memory management functions 
+for initial memory allocation (like allocation of the Page Frame Database) and then
+use this information to fill its memory management structures to reflect the initial allocation.
+ After that the initial the full featured memory management routines can be used.
+ 
+This strategy avoid knowing the layout of the kernel memory management structures
+when initializing the machine and improves development rates and platform independecy,
+at the cost, however, of a little more work and some mental confusion.
+
+The loader itself is platform dependent but has a common protocol with the 
+kernel entry point and the kernel memory manager subsystem. It is like a
+little OS with limited knowledge of memory management and executable loading. 
+Eventually the loader stage could also be able to load the kernel image
+and inital modules from disk or it could delegate this to stage 0 loaders
+like GRUB.
+ Every architecture has it's separation of tasks, involving potentially other entities
+interacting before the kernel itself boots, for example on the PC architecture the loader 
+interacts with the a multiboot compliant boot loader\footnote{Like grub} which is responsable
+for loading the loader and the kernel from disk or network, and switching to protected mode
+\footnote{this way simulating finally a real 32-bit machine. \acaros has no 16-bit code, not even on bootstrap ! :-)}
+
+The kernel is a normal ELF executable image compatible with the native Linux executable
+format, but probably it should work with solaris build tools as well.
+
+\section{Documentation}
+
+Other than this book there is also a reference documentation generated with \textsf{doxygen}
+in \textsf{src/doc/api/html} and \textsf{src/doc/api/latex}. 
+See building system at page \pageref{ch:build}.
+
+\section{History}
+
+The project begun when in late 2002 my professor of 
+\emph{technical computer science} at the SUPSI\footnote{switzerland university of applied sciences} showed us a little embedded real time OS called \textsf{uCos\texttrademark}, which came you needed came with a crappy build system and you needed to patch several files in order to compile, it ran with 
+a 16 bit turbo C compiler and it's scheduler didn't allow two threads to have the same priority.
+ 
+While it is surely a good choice in many application, and it's pors to many platforms are certainly useful I really don't understand why I or my university should pay royalities to a thing like this.
+ So I wrote a parody of uCos (spelled micro C O.S) and called it mikuCos (spelled m i q c o s),
+which quickly had a full blown time round robin scheduler, keyboard, timer, syncronization primitives, and then arrived a vt100 emulator, uart, pc speaker, virtual filesystem, pci, network driver, paging.
+The code was so ugly and eventually was so filled with various memory corruptions that it was
+wiser to rewrite everything with less hurry, and so \acaros was born.
+
+It started up as a joke mainly because I've found out how simple it was to load a ELF executable
+directly from the GRUB boot loader using standard tools and with little or no assembler, so
+the I skipped the most annoying part, the bootloader itself, on which people usually get so
+frustrated that they loose interest in OS writing (or simply loose their time) \ldots

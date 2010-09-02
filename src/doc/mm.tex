@@ -1,0 +1,217 @@
+\chapter{Memory Manager}
+
+The Memory Manger handles memory pages for kernel and
+user processes. The allocation of variable sized memory regions
+in pools (heaps) are handled by specific Memory Manager subsystems (Bay Watch,
+and Slab).
+
+\section{Physical memory allocation}
+
+The Memory Manager maintains a database 
+containing a structure for each physical page in memory.
+This structure is called \textsf{Page Frame Database}. 
+
+The physical memory is divided in segments of contiguous pages.
+Physical memory segments are maintained in AVL tree rooted in the PFD\footnote{Page Frame Database}.
+Each segment contains the start and end adresses and
+an array of \textsf{page\_frame} stucture which contains state information for
+each page in the range.\footnote{The current implementation uses a big array for the whole memory and puts non RAM memory in a ``bad'' list.}
+
+The PFD contains the list heads for several lists (used, free, bad, modified, \ldots)
+which group together pages frames with the same state. Since a page frame
+cannot have several states at the same time, the page frame structure
+contains a link field and it is an entry in a doubly linked list.
+
+Allocation of free pages is simple as getting the next page frame on the free\_list.
+
+\emph{It will be considered in the future to move to a binary buddy algorithm, in order
+to allocate efficently contigous blocks of pages. However it should not be a big
+performance problem, but eventually it can be an issue with device drivers requiring
+contigous regions bigger than one page...}
+
+\section{Virtual memory mapping}
+
+Virtual memory mapping are handled though \textsf{address\_space} structures
+which completely define a virtual memory layout of a process (the kernel also
+has an adress space). Each adress space contains a set of \textsf{region} objects
+containing the starting address, the size and common protection information.
+ The region objects have methods for handling page-in and page-out actions 
+and provide generic interface between various memory types. 
+
+For example:
+memory mapped exectable code page could be simply thrown away because it can
+be readed from disk but a modified data page should be saved in the page file
+\footnote{usually called swap in unix jargon}. region types can be implemented
+subclassing and customizing the Region class or simply implementing an object
+with the same protocol\footnote{See CO language, \ref{ch:co}}.
+
+Regions are maintaned in a AVL tree ordered by their address range
+so that a range containing a particular address can be found very quickly.
+
+\section{Pools}
+
+In some occasions we want to be able to allocate portions of a address space region
+and be able to track which areas are free and which are used.
+
+For example the slab allocator allocates blocks of $2^n$ pages from virtual memory.
+
+Virtual memory regions' ranges themselves are allocated from the whole kernel address space,
+to avoid overlapping.\footnote{Currently a sequential scan of reserved regions is 
+done and the first address that matches is accepted. Not free list handling.}
+
+The virtual memory range allocation is done only on page basis, for smaller blocks
+the slab allocator or other general purpose allocators are used.
+
+The main characteristic for this allocator is that unlike most other allocators
+can't keep free list informations sparse in the virtual space itself because free pages may 
+(and should) be unmapped. If the allocator needs to use free space to contain metadata
+it should use most of of a page once it allocates it as a metadata store. (see \ref{pool:allocator})
+
+It's mostly used as a page provider of the slab allocator, although it can be used directly.
+
+\paragraph{OOP} The range allocator is implemented in object oriended style, with different subclasses
+implementing different policies.
+
+The area(s) on with an allocator operates is called a \textsf{pool} and the area used to
+maintain the metadata is called a \textsf{pool control}.
+
+If the pool control is located inside the pool itself it's called a \textsf{resident pool control}.
+
+\paragraph{Global pool}
+
+The global pool is a pool containing the whole virtual memory range. It's used primary for
+allocating memory \textsf{region}s and, by extension, all other pools. 
+
+By definition the global pool has a resident pool control.
+The metadata must be placed in a partucular zone to avoid conflicts in 
+memory layout policy. For example it cannot be placed in the user space or in hyperspace, \ldots.
+
+\section{Virtual memory range allocator}
+
+Two main algorithms are implementd:
+
+\begin{itemize}
+\item free list allocator
+\item binary buddy allocator
+\end{itemize}
+
+\subsection{Free list allocator}
+
+The classical free list allocator uses free space itself to contain link fields used to
+link free space together. The virtual memory range allocator cannot waste whole pages
+just to maintain link to the next free range. Also used space header cannot be placed before actual
+data for the same reasion. 
+
+Metadata is allocated inside the region in paged sized chunks linked together to form a chain.
+Each chain contains a header and a number of equal sized slots containing metadata itself.
+The header contains a list head that links the chunks, a pointer to the first free slot,
+and a free slot count.
+
+Slots are allocated using a simple free list algorithm.
+Free slots are linked together and used slots contain metadata. 
+
+When no more free slots can be found a new chunk is allocated
+\footnote{Actually a free slot is kept for allocating this new chunk}
+and added to the list. When a chunk returns to have all free slots, the chunk is deallocated
+and removed from the chunk list.
+
+\subsection{Binary buddy allocator}
+
+The binary buddy allocator (not yet implemented) must use a non resident pool control.
+
+\section{Initialization}
+
+The loader provides a list of virtual memory areas with a string tag
+describing why they are mapped and what they contain. The loader also
+gives us a list of areas of allocated physical memory pages,
+ and a complete memory map indicating which memory ranges are mapped
+to RAM and what is device or ROM memory.
+
+The Memory Manger allocates the PFD memory using for the last time 
+loader functions and then translates the primitive loader maps into
+PFD and address space structures. It uses the libstand physical memory map
+to construct physical memory segments,
+and uses virtual memory mappings to remove them from the free\_list and add them
+to the used\_list.
+
+When initialization is done Memory Management methods are used to
+initialize other kernel subsystems.
+
+\section{Platform indepency}
+
+In order to be platform independed the Memory Manager subsystem
+has a platform specific layer (HAT, Hardware Translation Layer) which
+hides platform specific issues from generic code.
+ However is should be first clear what is common bewteen platforms and what
+not.
+
+Most hardware platforms implement an unique address space and the system splits 
+it in user and kernel areas\footnote{Usually in 2G/2G or 3G/1G splits},
+and it may seem reasonable to abstract this split in generic code but
+there is at least one platform that allows completly separate user and kernel
+spaces (UltraSparc). 
+
+Since each hardware address space has a number, each element
+in virtual memory can be identified with a pair (hardware address space / address).
+ For platforms which don't support harware implemented address spaces software
+assigns address space numbers to user and kernel spaces.
+
+The kernel maintains an array of adress spaces indexed with the address space identifiers.
+The HAT layer generates the pair (ASI/address) using hardware ASI or software ASI.
+ This layer of indirection does not cost much because the kernel would have
+to maintain separate address space trees anyways, because user contexts must be 
+changed at every context switch and kernel address space context should remain unchanged.
+
+\section{Page tables}
+
+\emph{This discussion is a bit x86 centric.. but should apply most standard paging
+  models, i.e the ones that use hardware page table traversal...}
+
+Page tables are structures contained in memory. The MMU knows the physical address of the 
+main page table\footnote{Page directory, in x86 terminology.}, and all pointers in the page
+tables are physical pointers.
+
+Kernel itself runs in virtual memory. Initial page tables are constructed by the loader
+before activating paging. There are mappings for the kernel code, data and stack.
+
+The difficulty arises when the kernel tries to access the page tables since it should
+map them in virtual memory before accessing it.
+
+There are basically two solutions:
+
+\begin{itemize}
+\item Map all physical memory to a fixed place in virtual space
+\item Make the page directory be itself a page table for a special region called hyperspace
+\end{itemize}
+
+The first solution would appear good when considering machines with few physical memory
+and a 2GB/2GB user/kernel split, but today mid-range machines can have considerably more RAM
+than it's allowed to map in the restricted kernel address space. Obviously this consideration
+is valid mostly considering the x86 architecture which has only a 32-bit address space and 
+lacks of hardware address space context (requiring sharing the limited 32-bit address space).
+ Linux suffers from this design limitation and for beeing able to use 
+\emph{high memory}\footnote{Memory above the range (usually 900MB) which can still be directly mapped in kernel space} one must compile the kernel with a particular option and inside the kernel it is very tricky to handle.
+
+The second solution is to map the page tables themselves in virtual memory.
+This is done simply by pointing a page directory entry back to the page directory itself
+so that a virtual address inside the range associated with that PDE is looked up using
+the page directory as a normal page table, thus accessing all page tables as if they were normal 
+pages inside this \emph{hyperspace}.
+
+Moreover if a page table is not present a normal page fault is generated so that
+we can implement on demand paging for page tables.
+
+\paragraph{Location}
+
+The hyperspace is located currently at the last 4MB of address space,
+but it can be considered moving it to the border of user and kernel space, in such position
+that the user pages are mapped in hyperspace below the user/kernel limit and the kernel
+pages above it. However I don't currently see any practical reasion of doing so
+other than elegance.
+
+
+
+
+
+
+

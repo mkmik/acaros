@@ -1,0 +1,25 @@
+\chapter{Coding Style}
+
+\section{Module names}
+
+Module names are lowercase.
+
+Example: \texttt{hat}
+
+\section{Function names}
+
+Function names are prefixed with the module name
+and are in ``smalltalk-style'': every word begins with
+a capital letter except the first one.
+
+Example: \texttt{module\_getSomething()}
+
+\section{Type names}
+
+Type names can be prefixed with the module name
+if the type is private. If types are used by clients
+but opaque module prefix is optional.
+
+Every type must end with the suffix \texttt{\_t}.
+Structure names (not typedefs) may not end with \texttt{\_t}.
+Every structure declaration should have a corresponding typedef.

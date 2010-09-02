@@ -1,0 +1,48 @@
+\BOOKMARK [0][-]{chapter.1}{1 Introduction}{}
+\BOOKMARK [1][-]{section.1.1}{1.1 Design notes}{chapter.1}
+\BOOKMARK [1][-]{section.1.2}{1.2 Virtual memory}{chapter.1}
+\BOOKMARK [1][-]{section.1.3}{1.3 Bootstrap}{chapter.1}
+\BOOKMARK [1][-]{section.1.4}{1.4 Documentation}{chapter.1}
+\BOOKMARK [1][-]{section.1.5}{1.5 History}{chapter.1}
+\BOOKMARK [0][-]{chapter.2}{2 Build system}{}
+\BOOKMARK [1][-]{section.2.1}{2.1 Introduction}{chapter.2}
+\BOOKMARK [1][-]{section.2.2}{2.2 Version control}{chapter.2}
+\BOOKMARK [1][-]{section.2.3}{2.3 Makefiles}{chapter.2}
+\BOOKMARK [1][-]{section.2.4}{2.4 Configuration}{chapter.2}
+\BOOKMARK [1][-]{section.2.5}{2.5 Build}{chapter.2}
+\BOOKMARK [1][-]{section.2.6}{2.6 Installation}{chapter.2}
+\BOOKMARK [2][-]{subsection.2.6.1}{2.6.1 Emulators}{section.2.6}
+\BOOKMARK [2][-]{subsection.2.6.2}{2.6.2 Booting Acaros }{section.2.6}
+\BOOKMARK [1][-]{section.2.7}{2.7 Debugging}{chapter.2}
+\BOOKMARK [1][-]{section.2.8}{2.8 Documentation}{chapter.2}
+\BOOKMARK [1][-]{section.2.9}{2.9 Implementation}{chapter.2}
+\BOOKMARK [0][-]{chapter.3}{3 Loader}{}
+\BOOKMARK [0][-]{chapter.4}{4 Kernel}{}
+\BOOKMARK [1][-]{section.4.1}{4.1 Introduction}{chapter.4}
+\BOOKMARK [1][-]{section.4.2}{4.2 Building}{chapter.4}
+\BOOKMARK [1][-]{section.4.3}{4.3 Boot}{chapter.4}
+\BOOKMARK [1][-]{section.4.4}{4.4 KDB}{chapter.4}
+\BOOKMARK [2][-]{subsection.4.4.1}{4.4.1 Interruption, resumption}{section.4.4}
+\BOOKMARK [2][-]{subsection.4.4.2}{4.4.2 Program state}{section.4.4}
+\BOOKMARK [2][-]{subsection.4.4.3}{4.4.3 Tricks \046 details}{section.4.4}
+\BOOKMARK [2][-]{subsection.4.4.4}{4.4.4 Performance issues}{section.4.4}
+\BOOKMARK [0][-]{chapter.5}{5 Memory Manager}{}
+\BOOKMARK [1][-]{section.5.1}{5.1 Physical memory allocation}{chapter.5}
+\BOOKMARK [1][-]{section.5.2}{5.2 Virtual memory mapping}{chapter.5}
+\BOOKMARK [1][-]{section.5.3}{5.3 Pools}{chapter.5}
+\BOOKMARK [1][-]{section.5.4}{5.4 Virtual memory range allocator}{chapter.5}
+\BOOKMARK [2][-]{subsection.5.4.1}{5.4.1 Free list allocator}{section.5.4}
+\BOOKMARK [2][-]{subsection.5.4.2}{5.4.2 Binary buddy allocator}{section.5.4}
+\BOOKMARK [1][-]{section.5.5}{5.5 Initialization}{chapter.5}
+\BOOKMARK [1][-]{section.5.6}{5.6 Platform indepency}{chapter.5}
+\BOOKMARK [1][-]{section.5.7}{5.7 Page tables}{chapter.5}
+\BOOKMARK [0][-]{chapter.6}{6 IO}{}
+\BOOKMARK [0][-]{appendix.A}{A Library helpers}{}
+\BOOKMARK [1][-]{section.A.1}{A.1 libstand}{appendix.A}
+\BOOKMARK [1][-]{section.A.2}{A.2 libalgo}{appendix.A}
+\BOOKMARK [2][-]{subsection.A.2.1}{A.2.1 Linked lists}{section.A.2}
+\BOOKMARK [2][-]{subsection.A.2.2}{A.2.2 AVL tree}{section.A.2}
+\BOOKMARK [0][-]{appendix.B}{B Coding Style}{}
+\BOOKMARK [1][-]{section.B.1}{B.1 Module names}{appendix.B}
+\BOOKMARK [1][-]{section.B.2}{B.2 Function names}{appendix.B}
+\BOOKMARK [1][-]{section.B.3}{B.3 Type names}{appendix.B}

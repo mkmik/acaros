@@ -1,0 +1,87 @@
+/* -*- mode: c -*- */
+
+#include <log/log.h>
+#include <elf.h>
+#include <stand/stand.h>
+#include <string.h>
+
+static int co_initialized = 0;
+
+void co_init() {
+  if(co_initialized)
+    return;
+
+  void * module = stand_findModule("kernel");
+  Elf32_Ehdr* ehdr = module;
+  Elf32_Shdr* shdr = module+ehdr->e_shoff;
+
+  klogf(LOG_MESSAGE, "num sections %d\n", ehdr->e_shnum);
+  klogf(LOG_MESSAGE, "section ent size %d\n", ehdr->e_shentsize);
+  char* strtable = 0;
+
+  int i = ehdr->e_shnum;
+  while(i--) {
+    if(shdr->sh_type == SHT_STRTAB) {
+      strtable = module+shdr->sh_offset;
+      break;
+    }
+    shdr = (void*)((pointer_t)shdr+ehdr->e_shentsize);
+  }
+
+  co_method_initializer_t* methods = 0;
+  int numMethods = 0;
+  co_class_initializer_t* classes = 0;
+  int numClasses = 0;
+
+  shdr = module+ehdr->e_shoff;
+  i = ehdr->e_shnum;
+  while(i--) {
+    /*    klogf(LOG_MESSAGE, " section %d, ", ehdr->e_shnum-i-1);
+    klogf(LOG_MESSAGE, " name %d '%s', ", shdr->sh_name, &strtable[shdr->sh_name]);
+    klogf(LOG_MESSAGE, " addr  %x, ", shdr->sh_addr);
+    klogf(LOG_MESSAGE, " size  %d, ", shdr->sh_size);
+    klogf(LOG_MESSAGE, " type %x\n", shdr->sh_type); */
+    
+    if(strcmp(&strtable[shdr->sh_name], ".co.methods") == 0) {
+      methods = (void*)shdr->sh_addr;
+      numMethods = shdr->sh_size / sizeof(co_method_initializer_t);
+    }
+    if(strcmp(&strtable[shdr->sh_name], ".co.classes") == 0) {
+      classes = (void*)shdr->sh_addr;
+      numClasses = shdr->sh_size / sizeof(co_class_initializer_t);
+    }
+
+    shdr = (void*)((pointer_t)shdr+ehdr->e_shentsize);
+  }
+
+  if(!classes)
+    panic("Cannot find '.co.classes' section");
+
+  if(!methods)
+    panic("Cannot find '.co.methods' section");
+
+  for(i=0; i<numClasses; i++) {
+    /*    klogf(LOG_MESSAGE, " class %s super %s size %d\n",
+         classes[i].class,
+         classes[i].superclass,
+         classes[i].size); */
+    *classes[i].globalSymbol = createClass(classes[i].class, 0, classes[i].size);
+  }
+  Class_t* class_class = findClass("Class");
+  for(i=0; i<numClasses; i++) {
+    findClass(classes[i].class)->parent = (Class_t*)findClass(classes[i].superclass);
+    (*classes[i].globalSymbol)->_class = class_class;
+  }
+
+  for(i=0; i<numMethods; i++) {
+    /*   klogf(LOG_MESSAGE, " class %s selector %s at %p\n", 
+	 methods[i].class,
+	 methods[i].selector,
+	 methods[i].method); */
+    addMethod(findClass(methods[i].class),
+	      methods[i].selector,
+	      methods[i].method);
+  }
+
+  co_initialized = 1;
+}

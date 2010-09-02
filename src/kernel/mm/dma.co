@@ -1,0 +1,46 @@
+/* -*- mode: c -*- */
+
+#include <mm/dma.ho>
+#include <hat/initial_paging.h>
+#include <mm/addressspace.ho>
+#include <stand/stand.h>
+#include <platform/paging.h>
+#include <log/log.h>
+#include <string.h>
+
+DmaPool_t *dmaPool;
+
+@-DmaPool@init(pointer_t start, size_t length, 
+		    pointer_t pstart) {
+  @physical_start = pstart;
+  @protection = PROT_READ | PROT_WRITE;
+  @name = "dma pool";
+ 
+  hat_initialMapPages(start, @physical_start, length / PAGE_SIZE, @protection, @name);
+
+  // stand hack
+  @standReserved = 1;
+
+  super@init(start, length);
+  @return self;
+}
+
+@-DmaPool@pageIn(pointer_t addr) {
+  @return 0;
+}
+
+void mm_dma_init() {
+  void *dmaPoolZone;
+
+  dmaPoolZone = stand_getNextFreeVirtual(stand_bootContext()->kernelBase,
+					      DMA_POOL_SIZE / PAGE_SIZE);
+
+  systemAddressSpace@print();
+
+  DmaPool_t *region = (DmaPool_t*)DmaPool@new(dmaPoolZone, DMA_POOL_SIZE, 
+						    (pointer_t)0x10000);
+  region@name = "dma pool";
+  systemAddressSpace@add(region);
+
+  dmaPool = region;
+};

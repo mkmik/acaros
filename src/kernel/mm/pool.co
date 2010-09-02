@@ -1,0 +1,181 @@
+/* -*- mode: c -*- */
+
+#include <mm/pool.ho>
+#include <hat/initial_paging.h>
+#include <mm/addressspace.ho>
+#include <stand/stand.h>
+#include <platform/paging.h>
+#include <log/log.h>
+
+#define POOL_SLOTS_IN_CHUNK ((PAGE_SIZE - sizeof(pool_chunk_t)) / sizeof(pool_slot_t))
+
+Pool_t *nonPagedPool;
+
+void pool_initChunk(pool_chunk_t *ch) {
+  INIT_LIST_HEAD(&ch->unallocatedSlots);
+  ch->numUnallocatedSlots = POOL_SLOTS_IN_CHUNK;
+  int i;
+  for(i=0; i<ch->numUnallocatedSlots; i++) {
+    list_add_tail(&ch->slots[i].unallocatedSlots, &ch->unallocatedSlots);
+    ch->slots[i].type = POOL_SLOT_UNALLOCATED;
+    ch->slots[i].debugID = i;
+  }
+}
+
+/** basic slot allocation inside a chunk */
+pool_slot_t *pool_chunk_allocSlot(pool_chunk_t *ch) {
+  if(ch->numUnallocatedSlots < 2)
+    return 0;
+
+  pool_slot_t *res = list_entry(ch->unallocatedSlots.next, pool_slot_t, unallocatedSlots);
+  list_del(ch->unallocatedSlots.next);
+  res->type = POOL_SLOT_ALLOCATED; // debug
+
+  ch->numUnallocatedSlots--;
+
+  return res;
+}
+
+pool_slot_t *pool_allocSlot(Pool_t *pool) {
+  // TODO: grow the list on failure
+  list_head_t *pos;
+  list_for_each(pos, &pool@chunks) {
+    pool_chunk_t *chunk = list_entry(pos, pool_chunk_t, chunkList);
+    pool_slot_t *slot = pool_chunk_allocSlot(chunk);
+    if(slot)
+      return slot;
+  }
+  return 0;
+};
+
+pool_slot_t* pool_createUsedSlot(Pool_t *self, pointer_t start, size_t length) {
+  pool_slot_t *slot =  pool_allocSlot(self);
+
+  if(slot == 0)
+    panic("POOL: cannot allocate slot");
+  
+  slot->type = POOL_SLOT_USED;
+  slot->start = start;
+  slot->length = length;
+  slot->range = null_avl_node;
+  avl_add(&slot->range, &@usedRoot, pool_slot_t);
+
+  return slot;
+};
+
+pointer_t pool_allocRangeInFreeSlot(Pool_t *self, pool_slot_t *freeSlot, size_t size) {
+  pool_slot_t *usedSlot;
+  usedSlot = pool_createUsedSlot(self, freeSlot->start, size);
+  
+  // shrink forward the free segment
+  freeSlot->start += size;
+  freeSlot->length -= size;
+
+  if(freeSlot->length == 0) {
+    // unalloc the slot
+    pool_chunk_t *chunk = list_entry(@chunks.next, pool_chunk_t, chunkList); // TODO: search
+    list_del(&freeSlot->freeList);
+    freeSlot->type = POOL_SLOT_UNALLOCATED;
+    list_add(&freeSlot->unallocatedSlots, &chunk->unallocatedSlots);
+  }
+  
+  return usedSlot->start;
+}
+
+@-Pool@init(pointer_t start, size_t length) {
+  super@init(start, length);
+
+  @protection |= PROT_WRITE;
+
+  @usedRoot = 0;
+  INIT_LIST_HEAD(&@chunks);
+  INIT_LIST_HEAD(&@freeList);
+
+  // init first chunk
+
+  klogf(LOG_MESSAGE, "pool start %x length %x\n", @start, @length);
+  pool_chunk_t *ich = (pool_chunk_t*)@start;
+
+  @pageIn(ich);
+
+  pool_initChunk(ich);
+  list_add(&ich->chunkList, &@chunks);
+
+  // mark first page as being allocated
+  pool_slot_t *slot = pool_chunk_allocSlot(ich);
+  slot->type = POOL_SLOT_USED;
+  slot->start = (pointer_t)ich;
+  slot->length = PAGE_SIZE;
+  slot->range = null_avl_node;
+  avl_add(&slot->range, &@usedRoot, pool_slot_t);
+  
+  // mark the rest as free space
+  slot = pool_chunk_allocSlot(ich);
+  slot->type = POOL_SLOT_FREE;
+  slot->start = (pointer_t)ich + PAGE_SIZE;
+  slot->length = @length - PAGE_SIZE;
+  list_add(&slot->freeList, &@freeList);
+
+  @return self;
+}
+
+/** check if addr is in an allocated range */
+@-Pool@pageIn(pointer_t addr) {
+  if(@usedRoot == 0)
+    return super@pageIn(addr);
+  pool_slot_t *slot = avl_find(addr, @usedRoot, pool_slot_t, range);
+  if(slot == 0) {
+    klogf(LOG_PANIC, "address 0x%x not in allocated pool range\n", addr);
+    panic("SIGSEGV");
+  }
+  return super@pageIn(addr);
+}
+
+@-Pool@allocRange(size_t pages) {
+  if(list_empty(&@freeList))
+    panic("FREE LIST EMPTY");
+
+  pool_slot_t *freeSlot;
+
+  list_head_t *pos;
+  list_for_each(pos, &@freeList) {
+    freeSlot = list_entry(pos, pool_slot_t, freeList);
+    klogf(LOG_DEBUG, "trying alloc %x bytes (%d pages) in slot of %x bytes\n", 
+	  pages * PAGE_SIZE, pages, freeSlot->length);	  
+    if(freeSlot->length >= (pages * PAGE_SIZE)) 
+      @return pool_allocRangeInFreeSlot(self, freeSlot, pages * PAGE_SIZE);
+  } 
+  
+  @return 0;
+}
+
+@-Pool@freeRange(pointer_t addr) {
+  pool_slot_t *slot = avl_find(addr, @usedRoot, pool_slot_t, range);
+  if(slot == 0)
+    panic("cannot free non allocated range"); 
+
+  // free witout compacting    
+  avl_delete(addr, &@usedRoot, pool_slot_t, range);
+
+  // giving back this range to the free list
+  slot->type = POOL_SLOT_FREE;
+  list_add(&slot->freeList, &@freeList);
+  
+  @return self;
+}
+
+void mm_pool_init() {
+  void *nonPagedPoolZone;
+
+  nonPagedPoolZone = stand_getNextFreeVirtual(stand_bootContext()->kernelBase,
+						NON_PAGED_POOL_SIZE / PAGE_SIZE);
+  Pool_t *region = (Pool_t*)Pool@new(nonPagedPoolZone, NON_PAGED_POOL_SIZE);
+  region@name = "non paged pool";
+  region@protection = PROT_READ | PROT_WRITE;
+  systemAddressSpace@add(region);
+
+  nonPagedPool = region;
+
+  //  systemAddressSpace@print();
+
+}

@@ -1,0 +1,58 @@
+/*
+ * Automatically generated C config: don't edit
+ */
+#define AUTOCONF_INCLUDED
+
+/*
+ * Processor type and features
+ */
+#undef CONFIG_M386
+#undef CONFIG_M486
+#undef CONFIG_M586
+#undef CONFIG_M586TSC
+#undef CONFIG_M586MMX
+#undef CONFIG_M686
+#undef CONFIG_MPENTIUMII
+#undef CONFIG_MPENTIUMIII
+#undef CONFIG_MPENTIUM4
+#undef CONFIG_MK6
+#define CONFIG_MK7 1
+#undef CONFIG_MK8
+#undef CONFIG_MELAN
+#undef CONFIG_MCRUSOE
+#undef CONFIG_MWINCHIPC6
+#undef CONFIG_MWINCHIP2
+#undef CONFIG_MWINCHIP3D
+#undef CONFIG_MCYRIXIII
+#undef CONFIG_MVIAC3_2
+#define CONFIG_X86_CMPXCHG 1
+#define CONFIG_X86_XADD 1
+#define CONFIG_X86_L1_CACHE_SHIFT 6
+#define CONFIG_RWSEM_XCHGADD_ALGORITHM 1
+#define CONFIG_X86_WP_WORKS_OK 1
+#define CONFIG_X86_INVLPG 1
+#define CONFIG_X86_BSWAP 1
+#define CONFIG_X86_POPAD_OK 1
+#define CONFIG_X86_TSC 1
+#define CONFIG_X86_GOOD_APIC 1
+#define CONFIG_X86_USE_PPRO_CHECKSUM 1
+#define CONFIG_X86_USE_3DNOW 1
+#undef CONFIG_SMP
+#define CONFIG_X86_UP_APIC 1
+#define CONFIG_X86_UP_IOAPIC 1
+#define CONFIG_X86_LOCAL_APIC 1
+#define CONFIG_X86_IO_APIC 1
+#define CONFIG_X86_MCE 1
+#undef CONFIG_X86_MCE_NONFATAL
+#undef CONFIG_X86_MCE_P4THERMAL
+#define CONFIG_MTRR 1
+
+/*
+ * Kernel debugger
+ */
+#undef CONFIG_KDB
+
+/*
+ * Memory Management
+ */
+#define CONFIG_PFD_STAND_CHECK 1

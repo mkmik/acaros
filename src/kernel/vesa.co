@@ -1,0 +1,29 @@
+/* -*- mode: c -*- */
+#include <log/log.h>
+#include <string.h>
+
+int vgaTest();
+
+int vesaTest() {
+  klogf(LOG_MESSAGE, "VESA test\n");
+
+  klogf(LOG_MESSAGE, "Scanning BIOS\n");
+  char*bios=0xc0000;
+  int found=0;
+  do {
+    if(strncmp(bios, "PMID", 4) == 0) {
+      klogf(LOG_MESSAGE, "Found at %p\n", bios);
+      found = 1;
+    }
+  } while(bios++<(0xc0000+128*1024));
+  if(!found) 
+    vgaTest();
+
+  return 0;
+}
+
+int vgaTest() {
+  klogf(LOG_MESSAGE, "Trying VGA\n");
+
+  return 0;
+}

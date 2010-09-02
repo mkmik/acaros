@@ -1,0 +1,116 @@
+/* -*- mode: c -*- */
+
+#include <co.h>
+#include <string.h>
+
+void* mm_malloc(size_t );
+
+static list_head_t class_list = LIST_HEAD_INIT(class_list);
+
+Class_t* createClass(char* name, Class_t* parent, size_t size) {
+  Class_t* class = mm_malloc(sizeof(Class_t));
+  class->name = name; 
+  class->parent = parent; 
+  class->size = size;
+  INIT_LIST_HEAD(&class->methods);
+  list_add(&class->classes, &class_list);
+  return class;
+}
+
+Class_t* findClass(char* name) {
+  list_head_t* tmp;
+  Class_t* class;
+  list_for_each(tmp, &class_list) {
+    class = list_entry(tmp, Class_t, classes);
+    if(strcmp(class->name, name) == 0)
+      return class;
+  }
+  return 0;
+}
+
+void addMethod(Class_t* class, char* name, method_t method) {
+  method_desc_t* desc = mm_malloc(sizeof(method_desc_t));
+  desc->name = name;
+  desc->method = method;
+  list_add(&desc->method_list, &class->methods);
+}
+
+object_t* createObject(Class_t* class) {
+  object_t* object = mm_malloc(class->size);
+  object->_class = class;
+  return object;
+}
+
+void* newObject(char* name) {
+  return (void*)createObject(findClass(name));
+}
+
+method_t lookup(Class_t* class, char* selector) {
+  list_head_t *it;
+  list_for_each(it, &class->methods) {
+    if(strcmp(list_entry(it, method_desc_t, method_list)->name,
+	      selector) == 0)
+      return list_entry(it, method_desc_t, method_list)->method;
+  }
+  return 0;
+}
+
+object_t* basicInvoke(Class_t* class, char* selector, 
+		      object_t* object, va_list args) {
+  method_t method = 0;
+
+  while(class) {
+    method = lookup(class, selector);
+    if(method) 
+      return method(object, args);
+    class = class->parent;
+  }
+  return object@doesNotUnderstand(selector, args);
+}
+
+object_t* invoke(char* selector, object_t* object,...) {
+  Class_t* class = object->_class;
+  va_list args;
+  va_start(args, object);
+
+  return basicInvoke(class, selector, object, args); 
+}
+
+object_t* invokeSuper(Class_t* class, char* selector, object_t* object,...) {
+  va_list args;
+  va_start(args, object);
+
+  if(class->parent)
+    class = class->parent;
+  else {
+    class = UnknownObject;
+  }
+
+  return basicInvoke(class, selector, object, args);
+}
+
+@-Object@init() {
+  @return self;
+}
+
+@-Object@perform(char* selector, va_list args) {
+  return basicInvoke(self->_class, selector, (object_t*)self, args);
+}
+
+@-Object@doesNotUnderstand(char* selector, va_list args) {
+  // avoid warnings
+  va_list* v= &args;
+  v=v;
+  selector=selector;
+  //  panic("Class '%s' does not understand '%s'", @_class->name, selector);
+  return 0;
+}
+
+@-Object@respondsTo(char* selector) {
+  @return (lookup(@_class, selector) != 0);
+}
+
+@-Class@new() {
+  object_t* obj = createObject(self);
+  return obj@perform("init", _args);
+}

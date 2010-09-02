@@ -1,0 +1,30 @@
+questa roba
+
+  unsigned int h, l;
+  rdmsr(MSR_IA32_APICBASE, l, h);
+  l &= ~ MSR_IA32_APICBASE;
+  l |= 0xFEE00000;
+  l |= MSR_IA32_APICBASE_ENABLE;
+  wrmsr(MSR_IA32_APICBASE, l, h);
+
+  printf("APIC id 0x%x\n", *(int*)0xFEE00020);  
+  printf("APIC version 0x%x\n", *(int*)0xFEE00030);
+
+  unsigned int eax, edx;
+  
+  __asm__("cpuid"
+	  : "=a" (eax), "=d" (edx)
+	  : "0" (1)
+	  : "bx", "cx");
+
+  printf("APIC cpuid %x, apic? %d\n", edx, edx & (1<<9));
+
+
+  rdmsr(MSR_IA32_APICBASE, l, h);
+  printf("msr %x, %x. enabled %d\n", h, l, l & MSR_IA32_APICBASE_ENABLE);
+
+  while(1);
+
+1) su vmware non funziona perche' non implementano apic
+2) su bochs va ma cpuid dice che non c'e' anche se c'e'
+3) su macchine PIII vere funziona

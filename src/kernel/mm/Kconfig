@@ -1,0 +1,12 @@
+#
+# Kernel debugger configuration
+#
+
+menu "Memory Management"
+
+config PFD_STAND_CHECK
+	bool "4GB stand sanity check"
+	help
+	enable 4 GB scan to see if stand boot context is consistent	
+
+endmenu

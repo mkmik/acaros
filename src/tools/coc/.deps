@@ -1,0 +1,3 @@
+class.o: class.c class.h filter.h ../../include/string.h \
+  ../../include/types.h
+def.o: def.c def.h filter.h ../../include/string.h ../../include/types.h

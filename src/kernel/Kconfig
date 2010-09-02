@@ -1,0 +1,2 @@
+source "kernel/kdb/Kconfig"
+source "kernel/mm/Kconfig"

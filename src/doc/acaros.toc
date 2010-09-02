@@ -1,0 +1,62 @@
+\contentsline {chapter}{\numberline {1}Introduction}{3}{chapter.1}
+\contentsline {section}{\numberline {1.1}Design notes}{3}{section.1.1}
+\contentsline {section}{\numberline {1.2}Virtual memory}{4}{section.1.2}
+\contentsline {section}{\numberline {1.3}Bootstrap}{5}{section.1.3}
+\contentsline {section}{\numberline {1.4}Documentation}{6}{section.1.4}
+\contentsline {section}{\numberline {1.5}History}{6}{section.1.5}
+\contentsline {chapter}{\numberline {2}Build system}{7}{chapter.2}
+\contentsline {section}{\numberline {2.1}Introduction}{7}{section.2.1}
+\contentsline {section}{\numberline {2.2}Version control}{7}{section.2.2}
+\contentsline {paragraph}{Checking out}{7}{section*.3}
+\contentsline {paragraph}{Updating}{8}{section*.4}
+\contentsline {paragraph}{Getting status}{8}{section*.5}
+\contentsline {paragraph}{Adding files and directories}{8}{section*.6}
+\contentsline {paragraph}{Renaming files and directories}{8}{section*.7}
+\contentsline {paragraph}{Ignore some files}{8}{section*.8}
+\contentsline {section}{\numberline {2.3}Makefiles}{9}{section.2.3}
+\contentsline {section}{\numberline {2.4}Configuration}{9}{section.2.4}
+\contentsline {section}{\numberline {2.5}Build}{9}{section.2.5}
+\contentsline {section}{\numberline {2.6}Installation}{10}{section.2.6}
+\contentsline {subsection}{\numberline {2.6.1}Emulators}{10}{subsection.2.6.1}
+\contentsline {subsubsection}{Vmware}{10}{section*.9}
+\contentsline {subsubsection}{Bochs}{10}{section*.10}
+\contentsline {subsubsection}{qemu}{10}{section*.11}
+\contentsline {subsection}{\numberline {2.6.2}Booting \textsf {Acaros}\ }{10}{subsection.2.6.2}
+\contentsline {subsubsection}{Floppy image}{11}{section*.12}
+\contentsline {subsubsection}{Network boot}{11}{section*.13}
+\contentsline {section}{\numberline {2.7}Debugging}{11}{section.2.7}
+\contentsline {section}{\numberline {2.8}Documentation}{12}{section.2.8}
+\contentsline {section}{\numberline {2.9}Implementation}{12}{section.2.9}
+\contentsline {chapter}{\numberline {3}Loader}{13}{chapter.3}
+\contentsline {chapter}{\numberline {4}Kernel}{15}{chapter.4}
+\contentsline {section}{\numberline {4.1}Introduction}{15}{section.4.1}
+\contentsline {section}{\numberline {4.2}Building}{15}{section.4.2}
+\contentsline {section}{\numberline {4.3}Boot}{15}{section.4.3}
+\contentsline {section}{\numberline {4.4}KDB}{15}{section.4.4}
+\contentsline {subsection}{\numberline {4.4.1}Interruption, resumption}{16}{subsection.4.4.1}
+\contentsline {subsection}{\numberline {4.4.2}Program state}{16}{subsection.4.4.2}
+\contentsline {subsection}{\numberline {4.4.3}Tricks \& details}{17}{subsection.4.4.3}
+\contentsline {subsection}{\numberline {4.4.4}Performance issues}{17}{subsection.4.4.4}
+\contentsline {chapter}{\numberline {5}Memory Manager}{19}{chapter.5}
+\contentsline {section}{\numberline {5.1}Physical memory allocation}{19}{section.5.1}
+\contentsline {section}{\numberline {5.2}Virtual memory mapping}{19}{section.5.2}
+\contentsline {section}{\numberline {5.3}Pools}{20}{section.5.3}
+\contentsline {paragraph}{OOP}{20}{section*.14}
+\contentsline {paragraph}{Global pool}{21}{section*.15}
+\contentsline {section}{\numberline {5.4}Virtual memory range allocator}{21}{section.5.4}
+\contentsline {subsection}{\numberline {5.4.1}Free list allocator}{21}{subsection.5.4.1}
+\contentsline {subsection}{\numberline {5.4.2}Binary buddy allocator}{21}{subsection.5.4.2}
+\contentsline {section}{\numberline {5.5}Initialization}{21}{section.5.5}
+\contentsline {section}{\numberline {5.6}Platform indepency}{22}{section.5.6}
+\contentsline {section}{\numberline {5.7}Page tables}{22}{section.5.7}
+\contentsline {paragraph}{Location}{23}{section*.16}
+\contentsline {chapter}{\numberline {6}IO}{25}{chapter.6}
+\contentsline {chapter}{\numberline {A}Library helpers}{27}{appendix.A}
+\contentsline {section}{\numberline {A.1}libstand}{27}{section.A.1}
+\contentsline {section}{\numberline {A.2}libalgo}{27}{section.A.2}
+\contentsline {subsection}{\numberline {A.2.1}Linked lists}{27}{subsection.A.2.1}
+\contentsline {subsection}{\numberline {A.2.2}AVL tree}{29}{subsection.A.2.2}
+\contentsline {chapter}{\numberline {B}Coding Style}{31}{appendix.B}
+\contentsline {section}{\numberline {B.1}Module names}{31}{section.B.1}
+\contentsline {section}{\numberline {B.2}Function names}{31}{section.B.2}
+\contentsline {section}{\numberline {B.3}Type names}{31}{section.B.3}

@@ -1,0 +1,20 @@
+#
+# Kernel debugger configuration
+#
+
+menu "Kernel debugger"
+
+config KDB
+	bool "Kernel debugger"
+	help
+	enables a gdb stub through a rs232 connection
+
+config KDB_WAIT
+	bool "Wait host connection on boot"
+	depends on KDB
+	help
+	the kernel waits the connection of the host debugger at boot
+	adding a breakpoint immediately after initialization of the kernel debugger.
+	
+
+endmenu
